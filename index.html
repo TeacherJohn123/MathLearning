@@ -1,4 +1,238 @@
-const { createApp, ref, computed, onMounted } = Vue;
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數學領域工作管理系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+  <div id="app" v-cloak class="flex h-screen overflow-hidden">
+    
+    <!-- 側邊欄 -->
+    <aside class="w-64 bg-slate-800 text-white flex flex-col h-full shadow-xl z-10 transition-all duration-300">
+      <div class="p-5 flex items-center justify-between border-b border-slate-700">
+        <h1 class="text-xl font-bold tracking-wider"><i class="fa-solid fa-square-root-variable mr-2"></i>數學領域會議</h1>
+      </div>
+      
+      <nav class="flex-1 overflow-y-auto py-4">
+        <ul class="space-y-1">
+          <li>
+            <a href="#" @click.prevent="currentView = 'history'" :class="{'bg-blue-600': currentView === 'history'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-users-gear w-6"></i>歷屆工作職位
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'meetings'" :class="{'bg-blue-600': currentView === 'meetings'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-regular fa-folder-open w-6"></i>歷年會議紀錄
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'evaluations'" :class="{'bg-blue-600': currentView === 'evaluations'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-file-contract w-6"></i>評鑑計畫與結果
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
+        <div class="flex items-center">
+          <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>
+          狀態: {{ syncStatusText }}
+        </div>
+        <div class="mt-1">上次同步: {{ lastSyncTime }}</div>
+      </div>
+    </aside>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+      <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
+        <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
+        <button @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+          <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 強制同步雲端
+        </button>
+      </header>
+      
+      <div class="flex-1 overflow-auto p-8">
+        <transition name="fade" mode="out-in">
+          
+          <!-- 視圖 1: 歷屆工作職位紀錄 -->
+          <div v-if="currentView === 'history'" key="history" class="space-y-6">
+            
+            <!-- 教師名單管理區 -->
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+              <div class="flex items-center justify-between mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-user-tag mr-2 text-blue-500"></i>領域教師名單管理</h3>
+                <button @click="showArchived = !showArchived" class="text-sm text-gray-500 hover:text-gray-700">
+                  <i class="fa-solid" :class="showArchived ? 'fa-eye-slash' : 'fa-eye'"></i> 
+                  {{ showArchived ? '隱藏封存區' : '顯示封存區' }}
+                </button>
+              </div>
+              
+              <!-- 現任教師 -->
+              <div class="mb-4">
+                <div class="text-sm font-semibold text-gray-600 mb-2">現任教師</div>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="name in activeTeachers" :key="name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    {{ name }}
+                    <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區">
+                      <i class="fa-solid fa-box-archive"></i>
+                    </button>
+                  </span>
+                  <span v-if="activeTeachers.length === 0" class="text-sm text-gray-500 py-1">尚無現任教師。</span>
+                </div>
+              </div>
+
+              <!-- 封存區 -->
+              <div v-show="showArchived" class="mb-4 p-3 bg-gray-50 border rounded-md">
+                <div class="text-sm font-semibold text-gray-500 mb-2">已封存 (離職/轉領域) 教師</div>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="name in archivedTeachers" :key="'archived-'+name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-600 border border-gray-300">
+                    {{ name }}
+                  </span>
+                  <span v-if="archivedTeachers.length === 0" class="text-sm text-gray-400 py-1">目前無封存名單。</span>
+                </div>
+              </div>
+
+              <!-- 新增/恢復教師 -->
+              <div class="flex gap-2">
+                <input v-model="newTeacherName" @keyup.enter="addTeacher" type="text" placeholder="輸入教師姓名 (按 Enter 新增，輸入已封存姓名則會恢復)" class="flex-1 max-w-xs border-gray-300 rounded-md shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm" />
+                <button @click="addTeacher" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">新增/恢復教師</button>
+              </div>
+            </div>
+
+            <!-- 工作分配表 -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+              <div class="flex justify-between items-center p-6 border-b bg-gray-50">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-table-list mr-2 text-gray-500"></i>工作分配表</h3>
+                <button @click="addHistoryRow" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm">
+                  <i class="fa-solid fa-plus mr-1"></i>新增學期
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-slate-100">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">學期</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">領域召集人</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">研習</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">會議記錄</th>
+                      <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr v-for="(row, index) in appData.workHistory" :key="index" class="hover:bg-gray-50 transition-colors">
+                      <td class="px-4 py-2">
+                        <input v-model="row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 115學年上學期">
+                      </td>
+                      <td class="px-4 py-2">
+                        <div class="flex flex-col gap-1">
+                          <select v-model="row.convener" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">請選擇</option>
+                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                          </select>
+                          <input v-model="row.convenerNote" @change="saveData" placeholder="備註(如: 代理OOO)" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
+                        </div>
+                      </td>
+                      <td class="px-4 py-2">
+                        <div class="flex flex-col gap-1">
+                          <select v-model="row.training" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">請選擇</option>
+                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                          </select>
+                          <input v-model="row.trainingNote" @change="saveData" placeholder="備註" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
+                        </div>
+                      </td>
+                      <td class="px-4 py-2">
+                        <div class="flex flex-col gap-1">
+                          <select v-model="row.minutes" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">請選擇</option>
+                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                          </select>
+                          <input v-model="row.minutesNote" @change="saveData" placeholder="備註" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
+                        </div>
+                      </td>
+                      <td class="px-4 py-2 text-center">
+                        <button @click="removeHistoryRow(index)" class="text-red-500 hover:text-red-700 p-1" title="刪除此列"><i class="fa-solid fa-trash-can"></i></button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 職位次數統計 (已移除積分) -->
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-emerald-500">
+              <h3 class="text-lg font-medium text-gray-800 mb-4"><i class="fa-solid fa-chart-pie mr-2 text-emerald-500"></i>各職位擔任次數統計</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="stat in teacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
+                  <div class="font-bold text-gray-700 text-lg mb-2 border-b pb-1">{{ stat.name }}</div>
+                  <ul class="text-sm space-y-1 text-gray-600">
+                    <li class="flex justify-between"><span>領域召集人：</span> <span class="font-medium text-blue-600">{{ stat.convener }} 次</span></li>
+                    <li class="flex justify-between"><span>外出研習：</span> <span class="font-medium text-blue-600">{{ stat.training }} 次</span></li>
+                    <li class="flex justify-between"><span>會議記錄：</span> <span class="font-medium text-blue-600">{{ stat.minutes }} 次</span></li>
+                  </ul>
+                  <div class="mt-2 pt-2 border-t flex justify-between font-semibold text-gray-800">
+                    <span>總擔任次數：</span> <span>{{ stat.total }} 次</span>
+                  </div>
+                </div>
+              </div>
+              <p v-if="teacherStats.length === 0" class="text-sm text-gray-500 mt-2">尚無統計資料，請先在上方表格中選擇教師。</p>
+            </div>
+          </div>
+
+          <!-- 視圖 2: 歷年會議紀錄 -->
+          <div v-if="currentView === 'meetings'" key="meetings" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-regular fa-folder-open mr-2 text-yellow-500"></i>雲端會議紀錄連結</h3>
+                <button @click="addMeetingLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.meetings" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <input v-model="link.title" @change="saveData" placeholder="連結名稱 (如: 112上數學領域會議紀錄)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                  <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                  <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                  <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                </li>
+                <li v-if="appData.meetings.length === 0" class="text-gray-500 text-sm">目前無任何會議紀錄連結。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 3: 評鑑計畫與結果 -->
+          <div v-if="currentView === 'evaluations'" key="evaluations" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-contract mr-2 text-purple-500"></i>意義驅動評鑑資料連結</h3>
+                <button @click="addEvalLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.evaluations" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑計畫表)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                  <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                  <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                  <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                </li>
+                <li v-if="appData.evaluations.length === 0" class="text-gray-500 text-sm">目前無任何評鑑資料連結。</li>
+              </ul>
+            </div>
+          </div>
+          
+        </transition>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
@@ -6,14 +240,12 @@ const { createApp, ref, computed, onMounted } = Vue;
         const currentView = ref('history');
         const syncStatus = ref('synced'); 
         const lastSyncTime = ref('尚未同步');
-        const GAS_URL = ''; 
+        const GAS_URL = ''; // 若有後端 GAS，將網址貼於此
         
         const newTeacherName = ref('');
-        const showArchived = ref(false); // 控制是否顯示封存區
+        const showArchived = ref(false);
 
         // --- 資料模型 ---
-        // 1. 將 teachers 改為物件陣列，包含 isActive 狀態
-        // 2. 根據您的 115 學年名單（陳奕任、林孟瑜、徐毓璘、陳秀琴、饒卿玄、黃涓喬），其他老師設為已封存
         const appData = ref({
           teachers: [
             { name: '陳奕任', isActive: true },
@@ -22,13 +254,13 @@ const { createApp, ref, computed, onMounted } = Vue;
             { name: '陳秀琴', isActive: true },
             { name: '饒卿玄', isActive: true },
             { name: '黃涓喬', isActive: true },
-            { name: '董宗翰', isActive: false }, // 已封存
-            { name: '孫韡', isActive: false },   // 已封存
-            { name: '李雯雯', isActive: false }, // 已封存
-            { name: '徐萍', isActive: false },   // 已封存
-            { name: '李宜縈', isActive: false }, // 已封存
-            { name: '林育璋', isActive: false }, // 已封存
-            { name: '陳馨蓓', isActive: false }  // 已封存
+            { name: '董宗翰', isActive: false },
+            { name: '孫韡', isActive: false },
+            { name: '李雯雯', isActive: false },
+            { name: '徐萍', isActive: false },
+            { name: '李宜縈', isActive: false },
+            { name: '林育璋', isActive: false },
+            { name: '陳馨蓓', isActive: false }
           ],
           workHistory: [
             { semester: '112學年上學期', convener: '陳奕任', convenerNote: '', training: '董宗翰', trainingNote: '代理饒卿玄老師', minutes: '黃涓喬', minutesNote: '' },
@@ -40,17 +272,18 @@ const { createApp, ref, computed, onMounted } = Vue;
             { semester: '115學年上學期', convener: '', convenerNote: '', training: '', trainingNote: '', minutes: '', minutesNote: '' },
             { semester: '115學年下學期', convener: '', convenerNote: '', training: '', trainingNote: '', minutes: '', minutesNote: '' }
           ], 
-          meetings: [],    
+          meetings: [
+            { title: '112上數學領域會議紀錄', url: '' },
+            { title: '113上數學領域會議紀錄', url: '' },
+            { title: '114上數學領域會議紀錄', url: '' },
+            { title: '114下數學領域會議紀錄', url: '' }
+          ],    
           evaluations: []  
         });
 
         // --- 計算屬性 ---
         const viewTitle = computed(() => {
-          const titles = {
-            'history': '歷屆工作職位紀錄',
-            'meetings': '歷年會議紀錄',
-            'evaluations': '意義驅動評鑑資料'
-          };
+          const titles = { 'history': '歷屆工作職位紀錄', 'meetings': '歷年會議紀錄', 'evaluations': '意義驅動評鑑資料' };
           return titles[currentView.value];
         });
 
@@ -60,27 +293,18 @@ const { createApp, ref, computed, onMounted } = Vue;
           return '已儲存';
         });
 
-        // 分離現任與已封存的老師名單，供介面與選單使用
-        const activeTeachers = computed(() => {
-            return appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : [];
-        });
+        const activeTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : []);
+        const archivedTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => !t.isActive).map(t => t.name) : []);
 
-        const archivedTeachers = computed(() => {
-             return appData.value.teachers ? appData.value.teachers.filter(t => !t.isActive).map(t => t.name) : [];
-        });
-
-        // 動態計算各老師職位次數 (僅針對現任老師)
+        // 動態計算次數，不再計算積分
         const teacherStats = computed(() => {
           const stats = {};
-          
-          if (!activeTeachers.value) return stats;
+          if (!activeTeachers.value) return [];
 
-          // 初始化「現任」老師的統計資料
           activeTeachers.value.forEach(name => {
-            stats[name] = { convener: 0, training: 0, minutes: 0, total: 0 };
+            stats[name] = { name: name, convener: 0, training: 0, minutes: 0, total: 0 };
           });
 
-          // 走訪歷史紀錄進行累加
           if (appData.value.workHistory) {
             appData.value.workHistory.forEach(row => {
               if (row.convener && stats[row.convener]) {
@@ -97,12 +321,13 @@ const { createApp, ref, computed, onMounted } = Vue;
               }
             });
           }
-          return stats;
+
+          // 將物件轉為陣列，這裡直接回傳（依照原名單順序），不進行排序
+          return Object.values(stats);
         });
 
         // --- 方法：資料操作 ---
         
-        // 教師管理：新增時預設為現任
         const addTeacher = () => {
           const name = newTeacherName.value.trim();
           if (!name) return;
@@ -111,7 +336,6 @@ const { createApp, ref, computed, onMounted } = Vue;
           const existingTeacher = appData.value.teachers.find(t => t.name === name);
           if (existingTeacher) {
             if (!existingTeacher.isActive) {
-               // 如果老師已存在但被封存，將其重新啟用
                existingTeacher.isActive = true;
                alert(`已將「${name}」從封存區恢復為現任老師。`);
             } else {
@@ -124,9 +348,8 @@ const { createApp, ref, computed, onMounted } = Vue;
           saveData();
         };
 
-        // 封存教師 (取代原本的刪除)
         const archiveTeacher = (name) => {
-          if (confirm(`確定要將「${name}」移至封存區嗎？這代表該老師已離開本領域，其歷史紀錄會保留，但不會出現在分配表選單中。`)) {
+          if (confirm(`確定要將「${name}」移至封存區嗎？紀錄會保留，但不會再出現於選單中。`)) {
              const teacher = appData.value.teachers.find(t => t.name === name);
              if (teacher) {
                  teacher.isActive = false;
@@ -135,48 +358,88 @@ const { createApp, ref, computed, onMounted } = Vue;
           }
         };
 
-        // ... (保留原本的 addHistoryRow, removeHistoryRow, addMeetingLink 等方法，以及 loadData, saveData) ...
-        
-        // --- 為了讓程式碼完整運作，補上原本的方法 ---
         const addHistoryRow = () => {
-          appData.value.workHistory.push({
-            semester: '', convener: '', convenerNote: '', 
-            training: '', trainingNote: '', minutes: '', minutesNote: ''
-          });
+          appData.value.workHistory.push({ semester: '', convener: '', convenerNote: '', training: '', trainingNote: '', minutes: '', minutesNote: '' });
           saveData();
         };
-
         const removeHistoryRow = (index) => {
-          if (confirm('確定要刪除這筆學期紀錄嗎？')) {
-            appData.value.workHistory.splice(index, 1);
-            saveData();
+          if (confirm('確定要刪除這筆紀錄嗎？')) { appData.value.workHistory.splice(index, 1); saveData(); }
+        };
+
+        const addMeetingLink = () => { appData.value.meetings.push({ title: '', url: '' }); saveData(); };
+        const removeMeetingLink = (index) => { appData.value.meetings.splice(index, 1); saveData(); };
+        const addEvalLink = () => { appData.value.evaluations.push({ title: '', url: '' }); saveData(); };
+        const removeEvalLink = (index) => { appData.value.evaluations.splice(index, 1); saveData(); };
+
+        // --- 同步機制 ---
+        
+        const loadData = async () => {
+          const localData = localStorage.getItem('mathDeptData');
+          if (localData) {
+            const parsedData = JSON.parse(localData);
+            // 兼容舊資料格式
+            if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
+               parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
+            }
+            if (!parsedData.meetings) parsedData.meetings = [];
+            if (!parsedData.evaluations) parsedData.evaluations = [];
+            appData.value = parsedData;
+          }
+
+          if (GAS_URL.startsWith('https://script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL);
+              const result = await response.json();
+              if (result.status === 'success' && result.data) {
+                appData.value = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+                localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+                lastSyncTime.value = new Date().toLocaleTimeString();
+                syncStatus.value = 'synced';
+              }
+            } catch (error) {
+              syncStatus.value = 'error';
+            }
           }
         };
 
-        const loadData = async () => {
-          // ... (邏輯不變，請保留您原本的 loadData 內容) ...
-        };
-
         const saveData = async () => {
-           // ... (邏輯不變，請保留您原本的 saveData 內容) ...
+          localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+          lastSyncTime.value = new Date().toLocaleTimeString();
+          
+          if (GAS_URL.startsWith('https://script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(appData.value)
+              });
+              const result = await response.json();
+              if (result.status === 'success') syncStatus.value = 'synced';
+              else throw new Error(result.message);
+            } catch (error) {
+              syncStatus.value = 'error';
+            }
+          } else {
+            syncStatus.value = 'synced'; 
+          }
         };
 
-        const forceSync = () => {
-          saveData();
-        };
+        const forceSync = () => saveData();
 
-        // 初始化
-        onMounted(() => {
-          // loadData(); // 暫時註解，避免覆蓋我們剛寫好的預設資料
-        });
+        onMounted(() => loadData());
 
         return {
           currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
           appData, forceSync,
-          newTeacherName, addTeacher, archiveTeacher, 
-          activeTeachers, archivedTeachers, showArchived,
+          newTeacherName, showArchived, activeTeachers, archivedTeachers, addTeacher, archiveTeacher,
           teacherStats, addHistoryRow, removeHistoryRow,
+          addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink,
           saveData
         };
       }
     }).mount('#app');
+  </script>
+</body>
+</html>
