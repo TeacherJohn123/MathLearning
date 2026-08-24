@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數學領域工作管理系統</title>
+  <!-- 引入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 引入 FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* 避免 Tailwind 預設覆蓋一些我們需要的樣式 */
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+  <div id="app" v-cloak class="flex h-screen overflow-hidden">
+    
+    <!-- 側邊欄 (Sidebar) -->
+    <aside class="w-64 bg-slate-800 text-white flex flex-col h-full shadow-xl z-10 transition-all duration-300">
+      <div class="p-5 flex items-center justify-between border-b border-slate-700">
+        <h1 class="text-xl font-bold tracking-wider"><i class="fa-solid fa-square-root-variable mr-2"></i>領域管理系統</h1>
+      </div>
+      
+      <!-- 導覽選單 -->
+      <nav class="flex-1 overflow-y-auto py-4">
+        <ul class="space-y-1">
+          <li>
+            <a href="#" @click.prevent="currentView = 'history'" :class="{'bg-blue-600': currentView === 'history'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-users-gear w-6"></i>歷屆工作職位
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'meetings'" :class="{'bg-blue-600': currentView === 'meetings'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-regular fa-folder-open w-6"></i>歷年會議紀錄
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'evaluations'" :class="{'bg-blue-600': currentView === 'evaluations'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-file-contract w-6"></i>評鑑計畫與結果
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <!-- 系統狀態列 -->
+      <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
+        <div class="flex items-center">
+          <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>
+          狀態: {{ syncStatusText }}
+        </div>
+        <div class="mt-1">上次同步: {{ lastSyncTime }}</div>
+      </div>
+    </aside>
+
+    <!-- 主內容區 (Main Content) -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+      <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
+        <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
+        <button @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+          <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 強制同步雲端
+        </button>
+      </header>
+      
+      <div class="flex-1 overflow-auto p-8">
+        <transition name="fade" mode="out-in">
+          
+          <!-- 視圖 1: 歷屆工作職位紀錄 -->
+          <div v-if="currentView === 'history'" key="history">
+            <!-- 我們稍後實作這裡的表格與統計 -->
+            <div class="bg-white rounded-lg shadow p-6">
+               <h3 class="text-lg font-medium mb-4 border-b pb-2">工作分配表</h3>
+               <p class="text-gray-500">（此處將放入工作輪值表與次數統計）</p>
+            </div>
+          </div>
+
+          <!-- 視圖 2: 歷年會議紀錄 -->
+          <div v-if="currentView === 'meetings'" key="meetings">
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="text-lg font-medium mb-4 border-b pb-2">雲端會議紀錄連結</h3>
+              <p class="text-gray-500">（此處將放入各學期會議紀錄的超連結列表）</p>
+            </div>
+          </div>
+
+          <!-- 視圖 3: 評鑑計畫與結果 -->
+          <div v-if="currentView === 'evaluations'" key="evaluations">
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="text-lg font-medium mb-4 border-b pb-2">意義驅動評鑑資料</h3>
+              <p class="text-gray-500">（此處將放入評鑑計畫與審查結果連結）</p>
+            </div>
+          </div>
+          
+        </transition>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // --- 狀態定義 ---
+        const currentView = ref('history');
+        const syncStatus = ref('synced'); // 'synced', 'syncing', 'error'
+        const lastSyncTime = ref('尚未同步');
+        const GAS_URL = '您的_GAS_網頁應用程式網址'; // 請替換
+        
+        // --- 資料模型 ---
+        const appData = ref({
+          workHistory: [], // 工作職位紀錄
+          meetings: [],    // 會議紀錄連結
+          evaluations: []  // 評鑑資料連結
+        });
+
+        // --- 計算屬性 ---
+        const viewTitle = computed(() => {
+          const titles = {
+            'history': '歷屆工作職位紀錄',
+            'meetings': '歷年會議紀錄',
+            'evaluations': '意義驅動評鑑資料'
+          };
+          return titles[currentView.value];
+        });
+
+        const syncStatusText = computed(() => {
+          if (syncStatus.value === 'syncing') return '同步中...';
+          if (syncStatus.value === 'error') return '同步失敗';
+          return '已與雲端同步';
+        });
+
+        // --- 核心邏輯：雙軌同步 ---
+        
+        // 1. 讀取邏輯
+        const loadData = async () => {
+          // 第一步：讀取本機 localStorage 快速渲染
+          const localData = localStorage.getItem('mathDeptData');
+          if (localData) {
+            appData.value = JSON.parse(localData);
+            console.log('已從 LocalStorage 載入資料');
+          }
+
+          // 第二步：背景向 GAS 抓取最新資料 (若 GAS_URL 有設定)
+          if (GAS_URL.includes('script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL);
+              const result = await response.json();
+              if (result.status === 'success') {
+                appData.value = result.data;
+                // 更新本機快取
+                localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+                lastSyncTime.value = new Date().toLocaleTimeString();
+                syncStatus.value = 'synced';
+                console.log('已從雲端更新資料');
+              } else {
+                throw new Error(result.message);
+              }
+            } catch (error) {
+              console.error('雲端同步失敗:', error);
+              syncStatus.value = 'error';
+            }
+          }
+        };
+
+        // 2. 寫入邏輯 (當資料變更時呼叫)
+        const saveData = async () => {
+          // 寫入本機快取
+          localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+          
+          // 寫入雲端 GAS
+          if (GAS_URL.includes('script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(appData.value)
+              });
+              const result = await response.json();
+              if (result.status === 'success') {
+                lastSyncTime.value = new Date().toLocaleTimeString();
+                syncStatus.value = 'synced';
+              } else {
+                throw new Error(result.message);
+              }
+            } catch (error) {
+              console.error('儲存至雲端失敗:', error);
+              syncStatus.value = 'error';
+              alert('雲端儲存失敗，資料已暫存於本機。');
+            }
+          }
+        };
+
+        // 強制同步按鈕
+        const forceSync = () => {
+          saveData();
+        };
+
+        // 初始化
+        onMounted(() => {
+          loadData();
+        });
+
+        return {
+          currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
+          appData, forceSync
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
