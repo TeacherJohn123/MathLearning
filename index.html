@@ -14,8 +14,26 @@
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
-  <div id="app" v-cloak class="flex h-screen overflow-hidden">
+  <div id="app" v-cloak class="flex h-screen overflow-hidden relative">
     
+    <!-- 管理員登入彈窗 (Modal) -->
+    <div v-if="showLoginModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div class="bg-white p-6 rounded-lg shadow-xl w-80">
+        <h3 class="text-lg font-bold mb-4 text-gray-800"><i class="fa-solid fa-lock mr-2 text-slate-500"></i>管理員登入</h3>
+        <input 
+          v-model="inputPassword" 
+          @keyup.enter="login"
+          type="password" 
+          placeholder="請輸入管理員密碼..." 
+          class="w-full border-gray-300 rounded-md p-2 mb-4 border focus:ring-blue-500 focus:border-blue-500"
+        >
+        <div class="flex justify-end gap-2">
+          <button @click="showLoginModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">取消</button>
+          <button @click="login" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">登入</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 側邊欄 -->
     <aside class="w-64 bg-slate-800 text-white flex flex-col h-full shadow-xl z-10 transition-all duration-300">
       <div class="p-5 flex items-center justify-between border-b border-slate-700">
@@ -42,12 +60,17 @@
         </ul>
       </nav>
       
+      <!-- 系統狀態與登入切換 -->
       <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
-        <div class="flex items-center">
-          <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>
-          狀態: {{ syncStatusText }}
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center">
+            <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>
+            狀態: {{ syncStatusText }}
+          </div>
+          <button v-if="!isAdmin" @click="showLoginModal = true" class="text-slate-500 hover:text-white transition-colors" title="管理員登入"><i class="fa-solid fa-lock"></i></button>
+          <button v-else @click="logout" class="text-green-400 hover:text-white transition-colors" title="登出管理員模式"><i class="fa-solid fa-unlock"></i> 管理員模式</button>
         </div>
-        <div class="mt-1">上次同步: {{ lastSyncTime }}</div>
+        <div>上次同步: {{ lastSyncTime }}</div>
       </div>
     </aside>
 
@@ -55,7 +78,7 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
       <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
         <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
-        <button @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+        <button v-if="isAdmin" @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
           <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 強制同步雲端
         </button>
       </header>
@@ -69,7 +92,7 @@
             <!-- 教師名單管理區 -->
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
               <div class="flex items-center justify-between mb-4 border-b pb-2">
-                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-user-tag mr-2 text-blue-500"></i>領域教師名單管理</h3>
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-user-tag mr-2 text-blue-500"></i>領域教師名單</h3>
                 <button @click="showArchived = !showArchived" class="text-sm text-gray-500 hover:text-gray-700">
                   <i class="fa-solid" :class="showArchived ? 'fa-eye-slash' : 'fa-eye'"></i> 
                   {{ showArchived ? '隱藏封存區' : '顯示封存區' }}
@@ -82,8 +105,10 @@
                   <span v-for="name in activeTeachers" :key="name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
                     <template v-if="editingOldName !== name">
                       {{ name }}
-                      <button @click="startEdit(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
-                      <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區"><i class="fa-solid fa-box-archive text-xs"></i></button>
+                      <template v-if="isAdmin">
+                        <button @click="startEdit(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區"><i class="fa-solid fa-box-archive text-xs"></i></button>
+                      </template>
                     </template>
                     <template v-else>
                       <input v-model="editingNewName" @keyup.enter="saveEdit" class="w-20 px-1 py-0.5 text-xs text-gray-800 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" />
@@ -101,8 +126,10 @@
                   <span v-for="name in archivedTeachers" :key="'archived-'+name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-600 border border-gray-300">
                     <template v-if="editingOldName !== name">
                       {{ name }}
-                      <button @click="startEdit(name)" class="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
-                      <button @click="restoreTeacher(name)" class="ml-2 text-green-600 hover:text-green-700 focus:outline-none" title="恢復為現任教師"><i class="fa-solid fa-rotate-left text-xs"></i></button>
+                      <template v-if="isAdmin">
+                        <button @click="startEdit(name)" class="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button @click="restoreTeacher(name)" class="ml-2 text-green-600 hover:text-green-700 focus:outline-none" title="恢復為現任教師"><i class="fa-solid fa-rotate-left text-xs"></i></button>
+                      </template>
                     </template>
                     <template v-else>
                       <input v-model="editingNewName" @keyup.enter="saveEdit" class="w-20 px-1 py-0.5 text-xs text-gray-800 border border-gray-400 rounded focus:outline-none bg-white" />
@@ -114,56 +141,61 @@
                 </div>
               </div>
 
-              <div class="flex gap-2">
+              <div v-if="isAdmin" class="flex gap-2">
                 <input v-model="newTeacherName" @keyup.enter="addTeacher" type="text" placeholder="輸入教師姓名 (按 Enter 新增)" class="flex-1 max-w-xs border-gray-300 rounded-md shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm" />
                 <button @click="addTeacher" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"><i class="fa-solid fa-plus mr-1"></i>新增教師</button>
               </div>
             </div>
 
-            <!-- 工作分配表 (雙選單版本) -->
+            <!-- 工作分配表 -->
             <div class="bg-white rounded-lg shadow overflow-hidden">
               <div class="flex justify-between items-center p-6 border-b bg-gray-50">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-table-list mr-2 text-gray-500"></i>工作分配表</h3>
-                <button @click="addHistoryRow" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm">
+                <button v-if="isAdmin" @click="addHistoryRow" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm">
                   <i class="fa-solid fa-plus mr-1"></i>新增學期
                 </button>
               </div>
               <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-slate-100">
+                <table class="min-w-full">
+                  <thead class="bg-slate-100 border-b">
                     <tr>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/6">學期</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">領域召集人</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">研習</th>
                       <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">會議記錄</th>
-                      <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">操作</th>
+                      <th v-if="isAdmin" class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">操作</th>
                     </tr>
                   </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="(row, index) in appData.workHistory" :key="index" class="hover:bg-gray-50 transition-colors">
-                      <td class="px-4 py-2 align-top pt-4">
-                        <input v-model="row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 115學年上學期">
+                  <tbody>
+                    <!-- 使用 reversedWorkHistory 從新到舊渲染，並套用學年背景色 -->
+                    <tr v-for="(rowObj, i) in reversedWorkHistory" :key="rowObj.originalIndex" 
+                        class="border-b transition-colors"
+                        :class="getYearColorClass(rowObj.row.semester)">
+                      
+                      <!-- 學期 -->
+                      <td class="px-4 py-4 align-top">
+                        <input v-if="isAdmin" v-model="rowObj.row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm font-medium focus:ring-blue-500 focus:border-blue-500 bg-white/60" placeholder="例如: 115學年上學期">
+                        <span v-else class="text-sm font-bold text-gray-700">{{ rowObj.row.semester || '-' }}</span>
                       </td>
                       
                       <!-- 領域召集人 -->
-                      <td class="px-4 py-2 align-top pt-4">
-                        <div class="flex flex-col gap-2">
-                          <div>
-                            <label class="block text-xs text-gray-500 mb-1">原定負責人</label>
-                            <select v-model="row.convener_original" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
-                              <option value="">請選擇</option>
-                              <optgroup label="現任教師">
-                                <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                              <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
-                                <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                            </select>
-                          </div>
-                          <div class="bg-gray-50 p-2 rounded border border-dashed border-gray-200">
-                            <label class="block text-xs text-blue-600 mb-1">實際執行 (代理人) - 若無免填</label>
-                            <select v-model="row.convener_actual" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
-                              <option value="">無代理，由原定人執行</option>
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <!-- 原定負責人 (放大) -->
+                          <select v-model="rowObj.row.convener_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <!-- 代理人 (縮小) -->
+                          <div class="flex items-center gap-1 mt-1">
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
+                            <select v-model="rowObj.row.convener_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
                               <optgroup label="現任教師">
                                 <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
                               </optgroup>
@@ -172,28 +204,31 @@
                               </optgroup>
                             </select>
                           </div>
+                        </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.convener_original || '-' }}</div>
+                           <div v-if="rowObj.row.convener_actual && rowObj.row.convener_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             代理: {{ rowObj.row.convener_actual }}
+                           </div>
                         </div>
                       </td>
 
                       <!-- 研習 -->
-                      <td class="px-4 py-2 align-top pt-4">
-                        <div class="flex flex-col gap-2">
-                          <div>
-                            <label class="block text-xs text-gray-500 mb-1">原定負責人</label>
-                            <select v-model="row.training_original" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
-                              <option value="">請選擇</option>
-                              <optgroup label="現任教師">
-                                <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                              <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
-                                <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                            </select>
-                          </div>
-                          <div class="bg-gray-50 p-2 rounded border border-dashed border-gray-200">
-                            <label class="block text-xs text-blue-600 mb-1">實際執行 (代理人) - 若無免填</label>
-                            <select v-model="row.training_actual" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
-                              <option value="">無代理，由原定人執行</option>
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <select v-model="rowObj.row.training_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <div class="flex items-center gap-1 mt-1">
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
+                            <select v-model="rowObj.row.training_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
                               <optgroup label="現任教師">
                                 <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
                               </optgroup>
@@ -202,28 +237,31 @@
                               </optgroup>
                             </select>
                           </div>
+                        </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.training_original || '-' }}</div>
+                           <div v-if="rowObj.row.training_actual && rowObj.row.training_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             代理: {{ rowObj.row.training_actual }}
+                           </div>
                         </div>
                       </td>
 
                       <!-- 會議記錄 -->
-                      <td class="px-4 py-2 align-top pt-4">
-                        <div class="flex flex-col gap-2">
-                          <div>
-                            <label class="block text-xs text-gray-500 mb-1">原定負責人</label>
-                            <select v-model="row.minutes_original" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
-                              <option value="">請選擇</option>
-                              <optgroup label="現任教師">
-                                <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                              <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
-                                <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
-                              </optgroup>
-                            </select>
-                          </div>
-                          <div class="bg-gray-50 p-2 rounded border border-dashed border-gray-200">
-                            <label class="block text-xs text-blue-600 mb-1">實際執行 (代理人) - 若無免填</label>
-                            <select v-model="row.minutes_actual" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
-                              <option value="">無代理，由原定人執行</option>
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <select v-model="rowObj.row.minutes_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <div class="flex items-center gap-1 mt-1">
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
+                            <select v-model="rowObj.row.minutes_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
                               <optgroup label="現任教師">
                                 <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
                               </optgroup>
@@ -233,10 +271,16 @@
                             </select>
                           </div>
                         </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.minutes_original || '-' }}</div>
+                           <div v-if="rowObj.row.minutes_actual && rowObj.row.minutes_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             代理: {{ rowObj.row.minutes_actual }}
+                           </div>
+                        </div>
                       </td>
 
-                      <td class="px-4 py-2 text-center align-top pt-6">
-                        <button @click="removeHistoryRow(index)" class="text-red-500 hover:text-red-700 p-1" title="刪除此列"><i class="fa-solid fa-trash-can"></i></button>
+                      <td v-if="isAdmin" class="px-4 py-2 text-center align-middle">
+                        <button @click="removeHistoryRow(rowObj.originalIndex)" class="text-red-500 hover:text-red-700 p-2" title="刪除此列"><i class="fa-solid fa-trash-can"></i></button>
                       </td>
                     </tr>
                   </tbody>
@@ -249,10 +293,9 @@
               <h3 class="text-lg font-medium text-gray-800 mb-4"><i class="fa-solid fa-chart-pie mr-2 text-emerald-500"></i>各職位擔任次數統計</h3>
               <p class="text-xs text-gray-500 mb-4 bg-yellow-50 p-2 border border-yellow-200 rounded">
                 <i class="fa-solid fa-circle-info mr-1 text-yellow-600"></i> 
-                統計規則：若由「非現任教師」代理，次數將累加至「原定負責人」；若由「現任教師」代理，次數則算在「實際執行(代理)人」身上。
+                統計規則：若由「非現任教師」代理，次數累加至「原定負責人」；若由「現任教師」代理，次數則算在「代理人」身上。
               </p>
               
-              <!-- 主要顯示：現任老師統計 -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div v-for="stat in activeTeacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
                   <div class="font-bold text-gray-700 text-lg mb-2 border-b pb-1">{{ stat.name }}</div>
@@ -268,13 +311,11 @@
               </div>
               <p v-if="activeTeacherStats.length === 0" class="text-sm text-gray-500 mt-2">尚無現任教師統計資料。</p>
 
-              <!-- 收合區域：非現任老師統計 -->
               <div class="mt-6 border-t pt-4" v-if="archivedTeacherStats.length > 0">
                 <button @click="showArchivedStats = !showArchivedStats" class="flex items-center text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
                   <i class="fa-solid w-4" :class="showArchivedStats ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
                   <span class="ml-1">顯示非現任教師實際執行次數</span>
                 </button>
-                
                 <div v-show="showArchivedStats" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
                   <div v-for="stat in archivedTeacherStats" :key="stat.name" class="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-100">
                     <div class="font-bold text-gray-500 text-base mb-2 border-b border-gray-200 pb-1">{{ stat.name }} <span class="text-xs font-normal">(非現任)</span></div>
@@ -297,14 +338,23 @@
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-regular fa-folder-open mr-2 text-yellow-500"></i>雲端會議紀錄連結</h3>
-                <button @click="addMeetingLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+                <button v-if="isAdmin" @click="addMeetingLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
               </div>
               <ul class="space-y-3">
                 <li v-for="(link, index) in appData.meetings" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
-                  <input v-model="link.title" @change="saveData" placeholder="連結名稱 (如: 112上數學領域會議紀錄)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                  <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                  <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                  <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="連結名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                    <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                       點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                    <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
                 </li>
                 <li v-if="appData.meetings.length === 0" class="text-gray-500 text-sm">目前無任何會議紀錄連結。</li>
               </ul>
@@ -316,14 +366,23 @@
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-contract mr-2 text-purple-500"></i>意義驅動評鑑資料連結</h3>
-                <button @click="addEvalLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+                <button v-if="isAdmin" @click="addEvalLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
               </div>
               <ul class="space-y-3">
                 <li v-for="(link, index) in appData.evaluations" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
-                  <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑計畫表)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
-                  <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
-                  <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                  <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="資料名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
+                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                     </a>
+                     <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
                 </li>
                 <li v-if="appData.evaluations.length === 0" class="text-gray-500 text-sm">目前無任何評鑑資料連結。</li>
               </ul>
@@ -340,6 +399,34 @@
 
     createApp({
       setup() {
+        const isAdmin = ref(false);
+        const showLoginModal = ref(false);
+        const inputPassword = ref('');
+        const ADMIN_PASSWORD = 'math123'; 
+
+        const login = () => {
+          if (inputPassword.value === ADMIN_PASSWORD) {
+            isAdmin.value = true;
+            showLoginModal.value = false;
+            inputPassword.value = '';
+            sessionStorage.setItem('mathAdminAuth', 'true');
+          } else {
+            alert('密碼錯誤！');
+            inputPassword.value = '';
+          }
+        };
+
+        const logout = () => {
+          isAdmin.value = false;
+          sessionStorage.removeItem('mathAdminAuth');
+        };
+
+        const checkAuth = () => {
+          if (sessionStorage.getItem('mathAdminAuth') === 'true') {
+            isAdmin.value = true;
+          }
+        };
+
         const currentView = ref('history');
         const syncStatus = ref('synced'); 
         const lastSyncTime = ref('尚未同步');
@@ -352,8 +439,6 @@
         const editingOldName = ref('');
         const editingNewName = ref('');
 
-        // 資料模型：將 workHistory 的欄位改為 original 與 actual
-        // 同時幫您把 112 上學期的「饒卿玄請董宗翰代理」及 113 上學期、114 下學期的代理資料，轉換成新格式
         const appData = ref({
           teachers: [
             { name: '陳奕任', isActive: true },
@@ -389,6 +474,32 @@
           evaluations: []  
         });
 
+        // --- 視覺輔助：學年度反轉與顏色 ---
+        
+        // 為了讓新資料在最上方，又不影響原始陣列的索引，建立一個帶有原始索引的反轉陣列
+        const reversedWorkHistory = computed(() => {
+          if (!appData.value.workHistory) return [];
+          return appData.value.workHistory.map((row, index) => ({
+            row: row,
+            originalIndex: index
+          })).reverse();
+        });
+
+        // 根據學年度字串回傳對應的背景色 class
+        const getYearColorClass = (semesterStr) => {
+          if (!semesterStr) return 'bg-white';
+          
+          // 嘗試提取前面的數字 (例如: "112學年" -> "112")
+          const match = semesterStr.match(/^(\d+)/);
+          if (!match) return 'bg-white';
+          
+          const yearNum = parseInt(match[1]);
+          
+          // 設定 4 種循環極淺色背景，利用學年除以 4 的餘數來決定顏色
+          const colors = ['bg-blue-50/40', 'bg-emerald-50/40', 'bg-amber-50/40', 'bg-purple-50/40'];
+          return colors[yearNum % 4];
+        };
+
         const viewTitle = computed(() => {
           const titles = { 'history': '歷屆工作職位紀錄', 'meetings': '歷年會議紀錄', 'evaluations': '意義驅動評鑑資料' };
           return titles[currentView.value];
@@ -403,11 +514,9 @@
         const activeTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : []);
         const archivedTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => !t.isActive).map(t => t.name) : []);
 
-        // 核心邏輯：計算次數 (依據代理規則)
         const allTeacherStats = computed(() => {
           const stats = {};
           
-          // 輔助函式：判斷某人是否為現任老師
           const isActiveTeacher = (name) => {
             const t = appData.value.teachers.find(teacher => teacher.name === name);
             return t ? t.isActive : false;
@@ -421,30 +530,22 @@
 
           if (appData.value.workHistory) {
             appData.value.workHistory.forEach(row => {
-              // 處理每一項職務的記點邏輯
               const processRole = (roleType, originalName, actualName) => {
-                let creditTo = ''; // 最終點數要記給誰
-
+                let creditTo = ''; 
                 if (originalName) {
                   if (!actualName) {
-                    // 狀況 1：沒人代理，算原定負責人的
                     creditTo = originalName;
                   } else {
-                    // 狀況 2：有人代理
                     if (isActiveTeacher(actualName)) {
-                      // 代理人是現任老師，算代理人的
                       creditTo = actualName;
                     } else {
-                      // 代理人是非現任老師，算回原定負責人的
                       creditTo = originalName;
                     }
                   }
                 } else if (actualName) {
-                    // 極端狀況：沒選原定負責人，但選了實際執行人，直接算給執行人
                     creditTo = actualName;
                 }
 
-                // 執行記點
                 if (creditTo && stats[creditTo]) {
                   stats[creditTo][roleType]++;
                   stats[creditTo].total++;
@@ -462,9 +563,10 @@
         const activeTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => stat.isActive));
         const archivedTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => !stat.isActive && stat.total > 0));
 
-        // --- 教師名單管理方法 ---
+        // --- 方法 ---
         
         const addTeacher = () => {
+          if (!isAdmin.value) return;
           const name = newTeacherName.value.trim();
           if (!name) return;
           if (!appData.value.teachers) appData.value.teachers = [];
@@ -484,6 +586,7 @@
         };
 
         const archiveTeacher = (name) => {
+          if (!isAdmin.value) return;
           if (confirm(`確定要將「${name}」移至封存區嗎？紀錄會保留，但不會再出現於選單中。`)) {
              const teacher = appData.value.teachers.find(t => t.name === name);
              if (teacher) {
@@ -494,6 +597,7 @@
         };
 
         const restoreTeacher = (name) => {
+          if (!isAdmin.value) return;
           const teacher = appData.value.teachers.find(t => t.name === name);
           if (teacher) {
              teacher.isActive = true;
@@ -501,9 +605,8 @@
           }
         };
 
-        // --- 教師名稱編輯方法 ---
-        
         const startEdit = (name) => {
+          if (!isAdmin.value) return;
           editingOldName.value = name;
           editingNewName.value = name;
         };
@@ -514,6 +617,7 @@
         };
 
         const saveEdit = () => {
+          if (!isAdmin.value) return;
           const oldName = editingOldName.value;
           const newName = editingNewName.value.trim();
 
@@ -532,7 +636,6 @@
             teacher.name = newName;
           }
 
-          // 連動更新新欄位結構
           appData.value.workHistory.forEach(row => {
             if (row.convener_original === oldName) row.convener_original = newName;
             if (row.convener_actual === oldName) row.convener_actual = newName;
@@ -546,9 +649,8 @@
           cancelEdit();
         };
 
-        // --- 其他表格與連結操作 ---
-
         const addHistoryRow = () => {
+          if (!isAdmin.value) return;
           appData.value.workHistory.push({ 
             semester: '', 
             convener_original: '', convener_actual: '', 
@@ -557,23 +659,25 @@
           });
           saveData();
         };
-        const removeHistoryRow = (index) => {
-          if (confirm('確定要刪除這筆紀錄嗎？')) { appData.value.workHistory.splice(index, 1); saveData(); }
+
+        // 注意：刪除時要傳入原始的 Index，因為畫面渲染的陣列是被反轉過的
+        const removeHistoryRow = (originalIndex) => {
+          if (!isAdmin.value) return;
+          if (confirm('確定要刪除這筆紀錄嗎？')) { 
+             appData.value.workHistory.splice(originalIndex, 1); 
+             saveData(); 
+          }
         };
 
-        const addMeetingLink = () => { appData.value.meetings.push({ title: '', url: '' }); saveData(); };
-        const removeMeetingLink = (index) => { appData.value.meetings.splice(index, 1); saveData(); };
-        const addEvalLink = () => { appData.value.evaluations.push({ title: '', url: '' }); saveData(); };
-        const removeEvalLink = (index) => { appData.value.evaluations.splice(index, 1); saveData(); };
+        const addMeetingLink = () => { if(isAdmin.value) { appData.value.meetings.push({ title: '', url: '' }); saveData(); } };
+        const removeMeetingLink = (index) => { if(isAdmin.value) { appData.value.meetings.splice(index, 1); saveData(); } };
+        const addEvalLink = () => { if(isAdmin.value) { appData.value.evaluations.push({ title: '', url: '' }); saveData(); } };
+        const removeEvalLink = (index) => { if(isAdmin.value) { appData.value.evaluations.splice(index, 1); saveData(); } };
 
-        // --- 同步機制 ---
-        
         const loadData = async () => {
           const localData = localStorage.getItem('mathDeptData');
           if (localData) {
             const parsedData = JSON.parse(localData);
-            
-            // 資料遷移：將舊版的 convener 欄位，自動轉入新版的 convener_original 中
             if (parsedData.workHistory && parsedData.workHistory.length > 0 && parsedData.workHistory[0].convener !== undefined) {
                parsedData.workHistory = parsedData.workHistory.map(row => {
                   return {
@@ -584,7 +688,6 @@
                   };
                });
             }
-
             if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
                parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
             }
@@ -633,17 +736,22 @@
           }
         };
 
-        const forceSync = () => saveData();
+        const forceSync = () => { if(isAdmin.value) saveData(); };
 
-        onMounted(() => loadData());
+        onMounted(() => {
+          checkAuth(); 
+          loadData();
+        });
 
         return {
+          isAdmin, showLoginModal, inputPassword, login, logout,
           currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
           appData, forceSync,
           newTeacherName, showArchived, showArchivedStats, activeTeachers, archivedTeachers, 
           addTeacher, archiveTeacher, restoreTeacher,
           editingOldName, editingNewName, startEdit, cancelEdit, saveEdit,
-          activeTeacherStats, archivedTeacherStats, addHistoryRow, removeHistoryRow,
+          activeTeacherStats, archivedTeacherStats, 
+          reversedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
           addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink,
           saveData
         };
