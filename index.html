@@ -76,21 +76,17 @@
                 </button>
               </div>
               
-              <!-- 現任教師 -->
               <div class="mb-4">
                 <div class="text-sm font-semibold text-gray-600 mb-2">現任教師</div>
                 <div class="flex flex-wrap gap-2">
                   <span v-for="name in activeTeachers" :key="name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
                     {{ name }}
-                    <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區">
-                      <i class="fa-solid fa-box-archive"></i>
-                    </button>
+                    <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區"><i class="fa-solid fa-box-archive"></i></button>
                   </span>
                   <span v-if="activeTeachers.length === 0" class="text-sm text-gray-500 py-1">尚無現任教師。</span>
                 </div>
               </div>
 
-              <!-- 封存區 -->
               <div v-show="showArchived" class="mb-4 p-3 bg-gray-50 border rounded-md">
                 <div class="text-sm font-semibold text-gray-500 mb-2">已封存 (離職/轉領域) 教師</div>
                 <div class="flex flex-wrap gap-2">
@@ -101,7 +97,6 @@
                 </div>
               </div>
 
-              <!-- 新增/恢復教師 -->
               <div class="flex gap-2">
                 <input v-model="newTeacherName" @keyup.enter="addTeacher" type="text" placeholder="輸入教師姓名 (按 Enter 新增，輸入已封存姓名則會恢復)" class="flex-1 max-w-xs border-gray-300 rounded-md shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm" />
                 <button @click="addTeacher" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">新增/恢復教師</button>
@@ -132,11 +127,18 @@
                       <td class="px-4 py-2">
                         <input v-model="row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 115學年上學期">
                       </td>
+                      
+                      <!-- 使用 optgroup 分類現任與非現任老師，讓歷史資料能正常顯示 -->
                       <td class="px-4 py-2">
                         <div class="flex flex-col gap-1">
                           <select v-model="row.convener" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">請選擇</option>
-                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
                           </select>
                           <input v-model="row.convenerNote" @change="saveData" placeholder="備註(如: 代理OOO)" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
                         </div>
@@ -145,7 +147,12 @@
                         <div class="flex flex-col gap-1">
                           <select v-model="row.training" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">請選擇</option>
-                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
                           </select>
                           <input v-model="row.trainingNote" @change="saveData" placeholder="備註" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
                         </div>
@@ -154,7 +161,12 @@
                         <div class="flex flex-col gap-1">
                           <select v-model="row.minutes" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">請選擇</option>
-                            <option v-for="t in activeTeachers" :key="t" :value="t">{{ t }}</option>
+                            <optgroup label="現任教師">
+                              <option v-for="t in activeTeachers" :key="'active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任教師" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
                           </select>
                           <input v-model="row.minutesNote" @change="saveData" placeholder="備註" class="w-full text-xs text-gray-500 border-dashed border-gray-300 rounded p-1">
                         </div>
@@ -168,11 +180,13 @@
               </div>
             </div>
 
-            <!-- 職位次數統計 (已移除積分) -->
+            <!-- 職位次數統計 -->
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-emerald-500">
               <h3 class="text-lg font-medium text-gray-800 mb-4"><i class="fa-solid fa-chart-pie mr-2 text-emerald-500"></i>各職位擔任次數統計</h3>
+              
+              <!-- 主要顯示：現任老師統計 -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div v-for="stat in teacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
+                <div v-for="stat in activeTeacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
                   <div class="font-bold text-gray-700 text-lg mb-2 border-b pb-1">{{ stat.name }}</div>
                   <ul class="text-sm space-y-1 text-gray-600">
                     <li class="flex justify-between"><span>領域召集人：</span> <span class="font-medium text-blue-600">{{ stat.convener }} 次</span></li>
@@ -184,7 +198,29 @@
                   </div>
                 </div>
               </div>
-              <p v-if="teacherStats.length === 0" class="text-sm text-gray-500 mt-2">尚無統計資料，請先在上方表格中選擇教師。</p>
+              <p v-if="activeTeacherStats.length === 0" class="text-sm text-gray-500 mt-2">尚無現任教師統計資料。</p>
+
+              <!-- 收合區域：非現任老師統計 -->
+              <div class="mt-6 border-t pt-4" v-if="archivedTeacherStats.length > 0">
+                <button @click="showArchivedStats = !showArchivedStats" class="flex items-center text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
+                  <i class="fa-solid w-4" :class="showArchivedStats ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                  <span class="ml-1">顯示非現任教師次數累積</span>
+                </button>
+                
+                <div v-show="showArchivedStats" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
+                  <div v-for="stat in archivedTeacherStats" :key="stat.name" class="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-100">
+                    <div class="font-bold text-gray-500 text-base mb-2 border-b border-gray-200 pb-1">{{ stat.name }} <span class="text-xs font-normal">(非現任)</span></div>
+                    <ul class="text-sm space-y-1 text-gray-500">
+                      <li class="flex justify-between"><span>領域召集人：</span> <span>{{ stat.convener }} 次</span></li>
+                      <li class="flex justify-between"><span>外出研習：</span> <span>{{ stat.training }} 次</span></li>
+                      <li class="flex justify-between"><span>會議記錄：</span> <span>{{ stat.minutes }} 次</span></li>
+                    </ul>
+                    <div class="mt-2 pt-2 border-t border-gray-200 flex justify-between font-semibold text-gray-600">
+                      <span>總擔任次數：</span> <span>{{ stat.total }} 次</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -244,6 +280,7 @@
         
         const newTeacherName = ref('');
         const showArchived = ref(false);
+        const showArchivedStats = ref(false); // 控制非現任統計的展開/收合
 
         // --- 資料模型 ---
         const appData = ref({
@@ -296,14 +333,14 @@
         const activeTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : []);
         const archivedTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => !t.isActive).map(t => t.name) : []);
 
-        // 動態計算次數，不再計算積分
-        const teacherStats = computed(() => {
+        // 一次計算所有老師的統計次數
+        const allTeacherStats = computed(() => {
           const stats = {};
-          if (!activeTeachers.value) return [];
-
-          activeTeachers.value.forEach(name => {
-            stats[name] = { name: name, convener: 0, training: 0, minutes: 0, total: 0 };
-          });
+          if (appData.value.teachers) {
+            appData.value.teachers.forEach(t => {
+              stats[t.name] = { name: t.name, isActive: t.isActive, convener: 0, training: 0, minutes: 0, total: 0 };
+            });
+          }
 
           if (appData.value.workHistory) {
             appData.value.workHistory.forEach(row => {
@@ -321,9 +358,17 @@
               }
             });
           }
+          return stats;
+        });
 
-          // 將物件轉為陣列，這裡直接回傳（依照原名單順序），不進行排序
-          return Object.values(stats);
+        // 過濾出現任老師的統計
+        const activeTeacherStats = computed(() => {
+          return Object.values(allTeacherStats.value).filter(stat => stat.isActive);
+        });
+
+        // 過濾出非現任老師的統計 (僅顯示至少有一次紀錄的人，保持版面乾淨)
+        const archivedTeacherStats = computed(() => {
+          return Object.values(allTeacherStats.value).filter(stat => !stat.isActive && stat.total > 0);
         });
 
         // --- 方法：資料操作 ---
@@ -377,7 +422,6 @@
           const localData = localStorage.getItem('mathDeptData');
           if (localData) {
             const parsedData = JSON.parse(localData);
-            // 兼容舊資料格式
             if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
                parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
             }
@@ -433,8 +477,8 @@
         return {
           currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
           appData, forceSync,
-          newTeacherName, showArchived, activeTeachers, archivedTeachers, addTeacher, archiveTeacher,
-          teacherStats, addHistoryRow, removeHistoryRow,
+          newTeacherName, showArchived, showArchivedStats, activeTeachers, archivedTeachers, addTeacher, archiveTeacher,
+          activeTeacherStats, archivedTeacherStats, addHistoryRow, removeHistoryRow,
           addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink,
           saveData
         };
