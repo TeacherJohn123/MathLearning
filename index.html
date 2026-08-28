@@ -6,27 +6,27 @@
   <title>數學領域工作管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     [v-cloak] { display: none; }
     .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
     .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .prose h3 { font-size: 1.125rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #1f2937; }
+    .prose p { margin-bottom: 0.75rem; line-height: 1.5; color: #4b5563; }
+    .prose ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 1rem; color: #4b5563; }
+    .prose li { margin-bottom: 0.25rem; }
+    .prose strong { font-weight: 600; color: #111827; }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans antialiased">
   <div id="app" v-cloak class="flex h-screen overflow-hidden relative">
     
-    <!-- 管理員登入彈窗 (Modal) -->
+    <!-- 管理員登入彈窗 -->
     <div v-if="showLoginModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
       <div class="bg-white p-6 rounded-lg shadow-xl w-80">
         <h3 class="text-lg font-bold mb-4 text-gray-800"><i class="fa-solid fa-lock mr-2 text-slate-500"></i>管理員登入</h3>
-        <input 
-          v-model="inputPassword" 
-          @keyup.enter="login"
-          type="password" 
-          placeholder="請輸入管理員密碼..." 
-          class="w-full border-gray-300 rounded-md p-2 mb-4 border focus:ring-blue-500 focus:border-blue-500"
-        >
+        <input v-model="inputPassword" @keyup.enter="login" type="password" placeholder="請輸入管理員密碼..." class="w-full border-gray-300 rounded-md p-2 mb-4 border focus:ring-blue-500 focus:border-blue-500">
         <div class="flex justify-end gap-2">
           <button @click="showLoginModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">取消</button>
           <button @click="login" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">登入</button>
@@ -54,18 +54,27 @@
           </li>
           <li>
             <a href="#" @click.prevent="currentView = 'evaluations'" :class="{'bg-blue-600': currentView === 'evaluations'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
-              <i class="fa-solid fa-file-contract w-6"></i>評鑑計畫與結果
+              <i class="fa-solid fa-file-signature w-6"></i>評鑑計畫表
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'eval_results'" :class="{'bg-blue-600': currentView === 'eval_results'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-file-circle-check w-6"></i>評鑑審查結果
+            </a>
+          </li>
+          <!-- AI 議案助手選單 -->
+          <li class="mt-4 border-t border-slate-700 pt-2">
+            <a href="#" @click.prevent="currentView = 'ai_assistant'" :class="{'bg-purple-600': currentView === 'ai_assistant'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors text-purple-200 hover:text-purple-100">
+              <i class="fa-solid fa-wand-magic-sparkles w-6"></i>AI 議案助手
             </a>
           </li>
         </ul>
       </nav>
       
-      <!-- 系統狀態與登入切換 -->
       <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center">
-            <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>
-            狀態: {{ syncStatusText }}
+            <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>狀態: {{ syncStatusText }}
           </div>
           <button v-if="!isAdmin" @click="showLoginModal = true" class="text-slate-500 hover:text-white transition-colors" title="管理員登入"><i class="fa-solid fa-lock"></i></button>
           <button v-else @click="logout" class="text-green-400 hover:text-white transition-colors" title="登出管理員模式"><i class="fa-solid fa-unlock"></i> 管理員模式</button>
@@ -172,7 +181,6 @@
                         class="border-b transition-colors"
                         :class="getYearColorClass(rowObj.row.semester)">
                       
-                      <!-- 學期 -->
                       <td class="px-4 py-4 align-top">
                         <input v-if="isAdmin" v-model="rowObj.row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm font-medium focus:ring-blue-500 focus:border-blue-500 bg-white/60" placeholder="例如: 115學年上學期">
                         <span v-else class="text-sm font-bold text-gray-700">{{ rowObj.row.semester || '-' }}</span>
@@ -181,7 +189,6 @@
                       <!-- 領域召集人 -->
                       <td class="px-4 py-3 align-top">
                         <div v-if="isAdmin" class="flex flex-col gap-1">
-                          <!-- 原定負責人 (放大) -->
                           <select v-model="rowObj.row.convener_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
                             <option value="">請選擇</option>
                             <optgroup label="現任教師">
@@ -191,7 +198,6 @@
                               <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
                             </optgroup>
                           </select>
-                          <!-- 代理人 (縮小) -->
                           <div class="flex items-center gap-1 mt-1">
                             <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
                             <select v-model="rowObj.row.convener_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
@@ -361,11 +367,11 @@
             </div>
           </div>
 
-          <!-- 視圖 3: 評鑑計畫與結果 -->
+          <!-- 視圖 3: 評鑑計畫表 -->
           <div v-if="currentView === 'evaluations'" key="evaluations" class="space-y-6">
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-contract mr-2 text-purple-500"></i>意義驅動評鑑資料連結</h3>
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-signature mr-2 text-purple-500"></i>歷年評鑑計畫表連結</h3>
                 <button v-if="isAdmin" @click="addEvalLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
               </div>
               <ul class="space-y-3">
@@ -384,8 +390,71 @@
                      <span v-else class="text-sm text-gray-400">尚無網址</span>
                   </template>
                 </li>
-                <li v-if="appData.evaluations.length === 0" class="text-gray-500 text-sm">目前無任何評鑑資料連結。</li>
+                <li v-if="appData.evaluations.length === 0" class="text-gray-500 text-sm">目前無任何計畫表連結。</li>
               </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 4: 評鑑審查結果 -->
+          <div v-if="currentView === 'eval_results'" key="eval_results" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-teal-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-circle-check mr-2 text-teal-500"></i>歷年評鑑審查結果連結</h3>
+                <button v-if="isAdmin" @click="addEvalResultLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.eval_results" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑審查結果)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeEvalResultLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
+                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                     </a>
+                     <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
+                </li>
+                <li v-if="appData.eval_results.length === 0" class="text-gray-500 text-sm">目前無任何審查結果連結。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 5: AI 議案助手 -->
+          <div v-if="currentView === 'ai_assistant'" key="ai_assistant" class="space-y-6 h-full flex flex-col">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500 flex-1 flex flex-col">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-robot mr-2 text-purple-500"></i>會議議案 AI 助手</h3>
+                <div class="flex items-center gap-2">
+                  <input v-model="geminiApiKey" type="password" placeholder="請貼上 Gemini API Key" class="border-gray-300 rounded p-1 text-xs focus:ring-purple-500 focus:border-purple-500 w-48 bg-gray-50">
+                </div>
+              </div>
+              <div class="flex gap-2 mb-4">
+                <button @click="aiMode = 'agenda'" :class="aiMode === 'agenda' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-lightbulb mr-1"></i> 議案發想與大綱</button>
+                <button @click="aiMode = 'record'" :class="aiMode === 'record' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-file-pen mr-1"></i> 決議潤飾與整理</button>
+              </div>
+              <div class="flex gap-6 flex-1 h-0">
+                <div class="w-1/2 flex flex-col">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ aiMode === 'agenda' ? '請簡述您想討論的議題方向：' : '請貼上會議中的草稿或零散筆記：' }}</label>
+                  <textarea v-model="aiInput" class="w-full flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 resize-none" :placeholder="aiMode === 'agenda' ? '例如：我想討論下學期五年級數學銜接教材的選用...' : '例如：大家同意銜接教材用南一版...'"></textarea>
+                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput || !geminiApiKey" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
+                    <i v-if="isGenerating" class="fa-solid fa-circle-notch fa-spin mr-2"></i>{{ isGenerating ? 'AI 正在思考中...' : (aiMode === 'agenda' ? '生成討論大綱' : '生成正式會議紀錄') }}
+                  </button>
+                </div>
+                <div class="w-1/2 flex flex-col">
+                  <div class="flex justify-between items-end mb-1">
+                    <label class="block text-sm font-medium text-gray-700">AI 生成結果：</label>
+                    <button v-if="aiOutput" @click="copyAiOutput" class="text-xs text-purple-600 hover:text-purple-800"><i class="fa-regular fa-copy mr-1"></i>複製結果</button>
+                  </div>
+                  <div class="w-full flex-1 border border-gray-300 rounded-md shadow-sm p-4 bg-gray-50 overflow-y-auto">
+                    <div v-if="aiOutput" v-html="compiledMarkdown" class="prose prose-sm max-w-none"></div>
+                    <div v-else class="h-full flex items-center justify-center text-gray-400 text-sm text-center">AI 產生的內容將顯示於此。</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -395,7 +464,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, watch } = Vue;
 
     createApp({
       setup() {
@@ -439,6 +508,12 @@
         const editingOldName = ref('');
         const editingNewName = ref('');
 
+        const geminiApiKey = ref('');
+        const aiMode = ref('agenda');
+        const aiInput = ref('');
+        const aiOutput = ref('');
+        const isGenerating = ref(false);
+
         const appData = ref({
           teachers: [
             { name: '陳奕任', isActive: true },
@@ -471,12 +546,10 @@
             { title: '114上數學領域會議紀錄', url: '' },
             { title: '114下數學領域會議紀錄', url: '' }
           ],    
-          evaluations: []  
+          evaluations: [],
+          eval_results: []
         });
 
-        // --- 視覺輔助：學年度反轉與顏色 ---
-        
-        // 為了讓新資料在最上方，又不影響原始陣列的索引，建立一個帶有原始索引的反轉陣列
         const reversedWorkHistory = computed(() => {
           if (!appData.value.workHistory) return [];
           return appData.value.workHistory.map((row, index) => ({
@@ -485,23 +558,23 @@
           })).reverse();
         });
 
-        // 根據學年度字串回傳對應的背景色 class
         const getYearColorClass = (semesterStr) => {
           if (!semesterStr) return 'bg-white';
-          
-          // 嘗試提取前面的數字 (例如: "112學年" -> "112")
           const match = semesterStr.match(/^(\d+)/);
           if (!match) return 'bg-white';
-          
           const yearNum = parseInt(match[1]);
-          
-          // 設定 4 種循環極淺色背景，利用學年除以 4 的餘數來決定顏色
           const colors = ['bg-blue-50/40', 'bg-emerald-50/40', 'bg-amber-50/40', 'bg-purple-50/40'];
           return colors[yearNum % 4];
         };
 
         const viewTitle = computed(() => {
-          const titles = { 'history': '歷屆工作職位紀錄', 'meetings': '歷年會議紀錄', 'evaluations': '意義驅動評鑑資料' };
+          const titles = { 
+            'history': '歷屆工作職位紀錄', 
+            'meetings': '歷年會議紀錄', 
+            'evaluations': '評鑑計畫表',
+            'eval_results': '評鑑審查結果',
+            'ai_assistant': 'AI 議案助手' 
+          };
           return titles[currentView.value];
         });
 
@@ -563,8 +636,6 @@
         const activeTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => stat.isActive));
         const archivedTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => !stat.isActive && stat.total > 0));
 
-        // --- 方法 ---
-        
         const addTeacher = () => {
           if (!isAdmin.value) return;
           const name = newTeacherName.value.trim();
@@ -659,20 +730,17 @@
           });
           saveData();
         };
-
-        // 注意：刪除時要傳入原始的 Index，因為畫面渲染的陣列是被反轉過的
         const removeHistoryRow = (originalIndex) => {
           if (!isAdmin.value) return;
-          if (confirm('確定要刪除這筆紀錄嗎？')) { 
-             appData.value.workHistory.splice(originalIndex, 1); 
-             saveData(); 
-          }
+          if (confirm('確定要刪除這筆紀錄嗎？')) { appData.value.workHistory.splice(originalIndex, 1); saveData(); }
         };
 
         const addMeetingLink = () => { if(isAdmin.value) { appData.value.meetings.push({ title: '', url: '' }); saveData(); } };
         const removeMeetingLink = (index) => { if(isAdmin.value) { appData.value.meetings.splice(index, 1); saveData(); } };
         const addEvalLink = () => { if(isAdmin.value) { appData.value.evaluations.push({ title: '', url: '' }); saveData(); } };
         const removeEvalLink = (index) => { if(isAdmin.value) { appData.value.evaluations.splice(index, 1); saveData(); } };
+        const addEvalResultLink = () => { if(isAdmin.value) { appData.value.eval_results.push({ title: '', url: '' }); saveData(); } };
+        const removeEvalResultLink = (index) => { if(isAdmin.value) { appData.value.eval_results.splice(index, 1); saveData(); } };
 
         const loadData = async () => {
           const localData = localStorage.getItem('mathDeptData');
@@ -693,6 +761,7 @@
             }
             if (!parsedData.meetings) parsedData.meetings = [];
             if (!parsedData.evaluations) parsedData.evaluations = [];
+            if (!parsedData.eval_results) parsedData.eval_results = [];
             appData.value = parsedData;
           }
 
@@ -738,10 +807,45 @@
 
         const forceSync = () => { if(isAdmin.value) saveData(); };
 
+        const compiledMarkdown = computed(() => {
+          if (!aiOutput.value) return '';
+          return marked.parse(aiOutput.value);
+        });
+
+        const callGeminiAPI = async () => {
+          if (!geminiApiKey.value) { alert('請先輸入 Gemini API Key'); return; }
+          isGenerating.value = true;
+          aiOutput.value = '';
+          let systemPrompt = aiMode.value === 'agenda' ? 
+            `你是一位專業的國小數學領域召集人。請根據使用者提供的議題方向，擬定一份結構清晰的「會議討論大綱」。\n請包含：1. 議題背景說明。 2. 核心問題。 3. 預期的決議方向。\n請使用 Markdown 格式排版。` : 
+            `你是一位專業的國小會議記錄秘書。請將使用者提供的零散筆記，潤飾成正式的「會議決議文」。\n要求：1. 語氣中性。 2. 結構包含「案由」、「討論情形」與「決議事項」。\n請使用 Markdown 格式排版。`;
+          try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey.value}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n使用者輸入：\n" + aiInput.value }] }], generationConfig: { temperature: 0.4 } })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            if (data.candidates && data.candidates[0].content.parts[0].text) aiOutput.value = data.candidates[0].content.parts[0].text;
+            else aiOutput.value = '無法生成內容，請稍後再試。';
+          } catch (error) {
+            alert('生成失敗，請檢查 API Key 是否正確。\n' + error.message);
+          } finally {
+            isGenerating.value = false;
+          }
+        };
+
+        const copyAiOutput = () => { navigator.clipboard.writeText(aiOutput.value).then(() => alert('已複製到剪貼簿！')); };
+
         onMounted(() => {
           checkAuth(); 
           loadData();
+          const savedKey = localStorage.getItem('gemini_api_key');
+          if (savedKey) geminiApiKey.value = savedKey;
         });
+
+        watch(geminiApiKey, (newVal) => localStorage.setItem('gemini_api_key', newVal));
 
         return {
           isAdmin, showLoginModal, inputPassword, login, logout,
@@ -752,8 +856,9 @@
           editingOldName, editingNewName, startEdit, cancelEdit, saveEdit,
           activeTeacherStats, archivedTeacherStats, 
           reversedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
-          addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink,
-          saveData
+          addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink, addEvalResultLink, removeEvalResultLink,
+          saveData,
+          geminiApiKey, aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
         };
       }
     }).mount('#app');
