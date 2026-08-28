@@ -176,7 +176,6 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- 使用 reversedWorkHistory 從新到舊渲染，並套用學年背景色 -->
                     <tr v-for="(rowObj, i) in reversedWorkHistory" :key="rowObj.originalIndex" 
                         class="border-b transition-colors"
                         :class="getYearColorClass(rowObj.row.semester)">
@@ -540,12 +539,7 @@
             { semester: '115學年上學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' },
             { semester: '115學年下學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' }
           ], 
-          meetings: [
-            { title: '112上數學領域會議紀錄', url: '' },
-            { title: '113上數學領域會議紀錄', url: '' },
-            { title: '114上數學領域會議紀錄', url: '' },
-            { title: '114下數學領域會議紀錄', url: '' }
-          ],    
+          meetings: [],    
           evaluations: [],
           eval_results: []
         });
@@ -820,7 +814,7 @@
             `你是一位專業的國小數學領域召集人。請根據使用者提供的議題方向，擬定一份結構清晰的「會議討論大綱」。\n請包含：1. 議題背景說明。 2. 核心問題。 3. 預期的決議方向。\n請使用 Markdown 格式排版。` : 
             `你是一位專業的國小會議記錄秘書。請將使用者提供的零散筆記，潤飾成正式的「會議決議文」。\n要求：1. 語氣中性。 2. 結構包含「案由」、「討論情形」與「決議事項」。\n請使用 Markdown 格式排版。`;
           try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${geminiApiKey.value}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey.value}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n使用者輸入：\n" + aiInput.value }] }], generationConfig: { temperature: 0.4 } })
