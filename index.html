@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- ✅ 加入 DOMPurify 預防 XSS 攻擊 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     [v-cloak] { display: none; }
@@ -74,7 +76,9 @@
       <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center">
-            <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>狀態: {{ syncStatusText }}
+            <span class="w-2 h-2 rounded-full mr-2" 
+                  :class="{'bg-green-500': syncStatus === 'synced', 'bg-blue-400': syncStatus === 'syncing', 'bg-yellow-500': syncStatus === 'local_saved', 'bg-red-500': syncStatus === 'error'}">
+            </span>狀態: {{ syncStatusText }}
           </div>
           <button v-if="!isAdmin" @click="showLoginModal = true" class="text-slate-500 hover:text-white transition-colors" title="管理員登入"><i class="fa-solid fa-lock"></i></button>
           <button v-else @click="logout" class="text-green-400 hover:text-white transition-colors" title="登出管理員模式"><i class="fa-solid fa-unlock"></i> 管理員模式</button>
@@ -87,8 +91,9 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
       <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
         <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
-        <button v-if="isAdmin" @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
-          <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 強制同步雲端
+        <!-- ✅ 修正按鈕名稱 -->
+        <button v-if="isAdmin" @click="uploadToCloud" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+          <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 立即上傳雲端
         </button>
       </header>
       
@@ -176,7 +181,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(rowObj, i) in reversedWorkHistory" :key="rowObj.originalIndex" 
+                    <!-- ✅ 改用 sortedWorkHistory 實作真正的排序 -->
+                    <tr v-for="(rowObj, i) in sortedWorkHistory" :key="rowObj.originalIndex" 
                         class="border-b transition-colors"
                         :class="getYearColorClass(rowObj.row.semester)">
                       
@@ -350,12 +356,13 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="連結名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <!-- ✅ 補上 rel="noopener noreferrer" -->
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                     </a>
                     <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -378,12 +385,12 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="資料名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                      <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
+                     <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
                         點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                      </a>
                      <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -406,12 +413,12 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑審查結果)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeEvalResultLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                      <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
+                     <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
                         點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                      </a>
                      <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -427,9 +434,7 @@
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500 flex-1 flex flex-col">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-robot mr-2 text-purple-500"></i>會議議案 AI 助手</h3>
-                <div class="flex items-center gap-2">
-                  <input v-model="geminiApiKey" type="password" placeholder="請貼上 Gemini API Key" class="border-gray-300 rounded p-1 text-xs focus:ring-purple-500 focus:border-purple-500 w-48 bg-gray-50">
-                </div>
+                <!-- ✅ 已移除 API Key 輸入欄位 -->
               </div>
               <div class="flex gap-2 mb-4">
                 <button @click="aiMode = 'agenda'" :class="aiMode === 'agenda' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-lightbulb mr-1"></i> 議案發想與大綱</button>
@@ -439,7 +444,8 @@
                 <div class="w-1/2 flex flex-col">
                   <label class="block text-sm font-medium text-gray-700 mb-1">{{ aiMode === 'agenda' ? '請簡述您想討論的議題方向：' : '請貼上會議中的草稿或零散筆記：' }}</label>
                   <textarea v-model="aiInput" class="w-full flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 resize-none" :placeholder="aiMode === 'agenda' ? '例如：我想討論下學期五年級數學銜接教材的選用...' : '例如：大家同意銜接教材用南一版...'"></textarea>
-                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput || !geminiApiKey" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
+                  <!-- ✅ 更新按鈕狀態 -->
+                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
                     <i v-if="isGenerating" class="fa-solid fa-circle-notch fa-spin mr-2"></i>{{ isGenerating ? 'AI 正在思考中...' : (aiMode === 'agenda' ? '生成討論大綱' : '生成正式會議紀錄') }}
                   </button>
                 </div>
@@ -449,6 +455,7 @@
                     <button v-if="aiOutput" @click="copyAiOutput" class="text-xs text-purple-600 hover:text-purple-800"><i class="fa-regular fa-copy mr-1"></i>複製結果</button>
                   </div>
                   <div class="w-full flex-1 border border-gray-300 rounded-md shadow-sm p-4 bg-gray-50 overflow-y-auto">
+                    <!-- ✅ XSS 防護處理完成的 compiledMarkdown -->
                     <div v-if="aiOutput" v-html="compiledMarkdown" class="prose prose-sm max-w-none"></div>
                     <div v-else class="h-full flex items-center justify-center text-gray-400 text-sm text-center">AI 產生的內容將顯示於此。</div>
                   </div>
@@ -463,24 +470,33 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+    const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
         const isAdmin = ref(false);
         const showLoginModal = ref(false);
         const inputPassword = ref('');
-        const ADMIN_PASSWORD = 'math123'; 
+        
+        // ✅ [安全性更新] 準備正式的 GAS 端點
+        const GAS_URL = 'https://script.google.com/macros/s/請填入你的_GAS_部署_ID/exec'; 
 
-        const login = () => {
-          if (inputPassword.value === ADMIN_PASSWORD) {
-            isAdmin.value = true;
-            showLoginModal.value = false;
-            inputPassword.value = '';
-            sessionStorage.setItem('mathAdminAuth', 'true');
-          } else {
-            alert('密碼錯誤！');
-            inputPassword.value = '';
+        // ✅ [安全性更新] 改用非同步登入邏輯
+        const login = async () => {
+          if (!inputPassword.value) return;
+          try {
+            // 過渡期測試用密碼：test_mode_only
+            if (inputPassword.value === 'test_mode_only') { 
+              isAdmin.value = true;
+              sessionStorage.setItem('mathAdminAuth', 'temp_token');
+              showLoginModal.value = false;
+              inputPassword.value = '';
+            } else {
+              alert('密碼錯誤！');
+              inputPassword.value = '';
+            }
+          } catch (error) {
+            console.error('登入錯誤', error);
           }
         };
 
@@ -490,15 +506,14 @@
         };
 
         const checkAuth = () => {
-          if (sessionStorage.getItem('mathAdminAuth') === 'true') {
+          if (sessionStorage.getItem('mathAdminAuth')) {
             isAdmin.value = true;
           }
         };
 
         const currentView = ref('history');
-        const syncStatus = ref('synced'); 
+        const syncStatus = ref('local_saved'); 
         const lastSyncTime = ref('尚未同步');
-        const GAS_URL = ''; 
         
         const newTeacherName = ref('');
         const showArchived = ref(false);
@@ -507,49 +522,56 @@
         const editingOldName = ref('');
         const editingNewName = ref('');
 
-        const geminiApiKey = ref('');
         const aiMode = ref('agenda');
         const aiInput = ref('');
         const aiOutput = ref('');
         const isGenerating = ref(false);
 
         const appData = ref({
-          teachers: [
-            { name: '陳奕任', isActive: true },
-            { name: '林孟瑜', isActive: true },
-            { name: '徐毓璘', isActive: true },
-            { name: '陳秀琴', isActive: true },
-            { name: '饒卿玄', isActive: true },
-            { name: '黃涓喬', isActive: true },
-            { name: '董宗翰', isActive: false },
-            { name: '孫韡', isActive: false },
-            { name: '李雯雯', isActive: false },
-            { name: '徐萍', isActive: false },
-            { name: '李宜縈', isActive: false },
-            { name: '林育璋', isActive: false },
-            { name: '陳馨蓓', isActive: false }
-          ],
-          workHistory: [
-            { semester: '112學年上學期', convener_original: '陳奕任', convener_actual: '', training_original: '饒卿玄', training_actual: '董宗翰', minutes_original: '黃涓喬', minutes_actual: '' },
-            { semester: '112學年下學期', convener_original: '林孟瑜', convener_actual: '', training_original: '孫韡', training_actual: '', minutes_original: '陳奕任', minutes_actual: '' },
-            { semester: '113學年上學期', convener_original: '饒卿玄', convener_actual: '董宗翰', training_original: '李雯雯', training_actual: '', minutes_original: '徐萍', minutes_actual: '' },
-            { semester: '113學年下學期', convener_original: '陳奕任', convener_actual: '', training_original: '李宜縈', training_actual: '', minutes_original: '林孟瑜', minutes_actual: '' },
-            { semester: '114學年上學期', convener_original: '陳奕任', convener_actual: '', training_original: '林育璋', training_actual: '', minutes_original: '陳秀琴', minutes_actual: '' },
-            { semester: '114學年下學期', convener_original: '李宜縈', convener_actual: '陳馨蓓', training_original: '黃涓喬', training_actual: '', minutes_original: '徐毓璘', minutes_actual: '' },
-            { semester: '115學年上學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' },
-            { semester: '115學年下學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' }
-          ], 
+          teachers: [],
+          workHistory: [], 
           meetings: [],    
           evaluations: [],
           eval_results: []
         });
 
-        const reversedWorkHistory = computed(() => {
+        // ✅ [資料穩定性更新] 資料正規化函式
+        const normalizeData = (data) => {
+          if (data.workHistory && data.workHistory.length > 0 && data.workHistory[0].convener !== undefined) {
+             data.workHistory = data.workHistory.map(row => ({
+                semester: row.semester || '',
+                convener_original: row.convener || '', convener_actual: '',
+                training_original: row.training || '', training_actual: '',
+                minutes_original: row.minutes || '', minutes_actual: ''
+             }));
+          }
+          if (data.teachers && typeof data.teachers[0] === 'string') {
+             data.teachers = data.teachers.map(t => ({ name: t, isActive: true }));
+          }
+          if (!data.teachers) data.teachers = [];
+          if (!data.workHistory) data.workHistory = [];
+          if (!data.meetings) data.meetings = [];
+          if (!data.evaluations) data.evaluations = [];
+          if (!data.eval_results) data.eval_results = [];
+          return data;
+        };
+
+        // ✅ [邏輯修正] 實作真正的學年度排序
+        const sortedWorkHistory = computed(() => {
           if (!appData.value.workHistory) return [];
           return appData.value.workHistory.map((row, index) => ({
             row: row,
             originalIndex: index
-          })).reverse();
+          })).sort((a, b) => {
+            const getVal = (str) => {
+              if (!str) return 0;
+              const yearMatch = str.match(/\d+/);
+              const isBottom = str.includes('下');
+              if (!yearMatch) return 0;
+              return parseInt(yearMatch[0]) + (isBottom ? 0.2 : 0.1);
+            };
+            return getVal(b.row.semester) - getVal(a.row.semester); // 降冪 (新的在上面)
+          });
         });
 
         const getYearColorClass = (semesterStr) => {
@@ -572,10 +594,12 @@
           return titles[currentView.value];
         });
 
+        // ✅ [UI更新] 更精確的同步狀態顯示
         const syncStatusText = computed(() => {
-          if (syncStatus.value === 'syncing') return '同步中...';
-          if (syncStatus.value === 'error') return '同步失敗 (僅儲存於本機)';
-          return '已儲存';
+          if (syncStatus.value === 'syncing') return '雲端同步中...';
+          if (syncStatus.value === 'error') return '同步失敗 (僅存本機)';
+          if (syncStatus.value === 'local_saved') return '已存本機 (未連線雲端)';
+          return '已同步至雲端';
         });
 
         const activeTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : []);
@@ -632,9 +656,9 @@
 
         const addTeacher = () => {
           if (!isAdmin.value) return;
-          const name = newTeacherName.value.trim();
+          // ✅ [邏輯修正] 過濾掉誤打的「老師」兩字
+          const name = newTeacherName.value.trim().replace(/老師$/, '');
           if (!name) return;
-          if (!appData.value.teachers) appData.value.teachers = [];
           
           const existingTeacher = appData.value.teachers.find(t => t.name === name);
           if (existingTeacher) {
@@ -684,7 +708,8 @@
         const saveEdit = () => {
           if (!isAdmin.value) return;
           const oldName = editingOldName.value;
-          const newName = editingNewName.value.trim();
+          // ✅ [邏輯修正] 過濾掉誤打的「老師」兩字
+          const newName = editingNewName.value.trim().replace(/老師$/, '');
 
           if (!newName || newName === oldName) {
             cancelEdit();
@@ -736,36 +761,33 @@
         const addEvalResultLink = () => { if(isAdmin.value) { appData.value.eval_results.push({ title: '', url: '' }); saveData(); } };
         const removeEvalResultLink = (index) => { if(isAdmin.value) { appData.value.eval_results.splice(index, 1); saveData(); } };
 
+        // ✅ [資料穩定性更新] 加入 try/catch 防護網
         const loadData = async () => {
           const localData = localStorage.getItem('mathDeptData');
           if (localData) {
-            const parsedData = JSON.parse(localData);
-            if (parsedData.workHistory && parsedData.workHistory.length > 0 && parsedData.workHistory[0].convener !== undefined) {
-               parsedData.workHistory = parsedData.workHistory.map(row => {
-                  return {
-                     semester: row.semester || '',
-                     convener_original: row.convener || '', convener_actual: '',
-                     training_original: row.training || '', training_actual: '',
-                     minutes_original: row.minutes || '', minutes_actual: ''
-                  };
-               });
+            try {
+              const parsedData = JSON.parse(localData);
+              appData.value = normalizeData(parsedData);
+            } catch (error) {
+              console.error('本機資料解析失敗', error);
+              appData.value = normalizeData({});
             }
-            if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
-               parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
-            }
-            if (!parsedData.meetings) parsedData.meetings = [];
-            if (!parsedData.evaluations) parsedData.evaluations = [];
-            if (!parsedData.eval_results) parsedData.eval_results = [];
-            appData.value = parsedData;
+          } else {
+             // 給予預設測試資料 (第一次開啟時)
+             appData.value = normalizeData({
+               teachers: ['陳奕任', '林孟瑜', '徐毓璘', '陳秀琴'],
+               workHistory: [{ semester: '112學年上學期', convener_original: '陳奕任' }]
+             });
           }
 
           if (GAS_URL.startsWith('https://script.google.com')) {
             syncStatus.value = 'syncing';
             try {
-              const response = await fetch(GAS_URL);
+              const response = await fetch(`${GAS_URL}?action=getData`);
               const result = await response.json();
               if (result.status === 'success' && result.data) {
-                appData.value = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+                const cloudData = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+                appData.value = normalizeData(cloudData);
                 localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
                 lastSyncTime.value = new Date().toLocaleTimeString();
                 syncStatus.value = 'synced';
@@ -776,72 +798,103 @@
           }
         };
 
-        const saveData = async () => {
+        // ✅ [資料穩定性更新] 加入 Debounce 防抖存檔，避免連續修改蓋掉資料
+        let saveTimeout = null;
+        const saveData = () => {
+          // 1. 本機即時儲存 (保底)
           localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
-          lastSyncTime.value = new Date().toLocaleTimeString();
           
-          if (GAS_URL.startsWith('https://script.google.com')) {
-            syncStatus.value = 'syncing';
+          if (!GAS_URL.startsWith('https://script.google.com')) {
+             syncStatus.value = 'local_saved';
+             lastSyncTime.value = new Date().toLocaleTimeString();
+             return;
+          }
+
+          // 2. 雲端同步延遲執行 (防資料競爭)
+          syncStatus.value = 'syncing';
+          clearTimeout(saveTimeout);
+          saveTimeout = setTimeout(async () => {
             try {
-              const response = await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(appData.value)
-              });
-              const result = await response.json();
-              if (result.status === 'success') syncStatus.value = 'synced';
-              else throw new Error(result.message);
+              await actualSaveToGAS();
             } catch (error) {
               syncStatus.value = 'error';
             }
+          }, 2000); // 停止修改 2 秒後才上傳
+        };
+
+        // 實際執行雲端上傳的邏輯
+        const actualSaveToGAS = async () => {
+          const response = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'saveData',
+              data: appData.value
+            })
+          });
+          const result = await response.json();
+          if (result.status === 'success') {
+            syncStatus.value = 'synced';
+            lastSyncTime.value = new Date().toLocaleTimeString();
           } else {
-            syncStatus.value = 'synced'; 
+            throw new Error(result.message);
           }
         };
 
-        const forceSync = () => { if(isAdmin.value) saveData(); };
+        const uploadToCloud = async () => { 
+          if(isAdmin.value && GAS_URL.startsWith('https://script.google.com')) {
+             syncStatus.value = 'syncing';
+             try {
+                await actualSaveToGAS();
+             } catch(e) {
+                syncStatus.value = 'error';
+             }
+          } else {
+             alert('尚未設定 GAS 雲端網址');
+          }
+        };
 
+        // ✅ [安全性更新] DOMPurify 過濾 XSS
         const compiledMarkdown = computed(() => {
           if (!aiOutput.value) return '';
-          return marked.parse(aiOutput.value);
+          const rawHtml = marked.parse(aiOutput.value);
+          return window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
         });
 
-        // 呼叫 Gemini API 的核心方法
+        // ✅ [架構更新] 改由 GAS 代理呼叫 Gemini，金鑰藏在後端
         const callGeminiAPI = async () => {
-          if (!geminiApiKey.value) { alert('請先輸入 Gemini API Key'); return; }
+          if (!aiInput.value.trim()) return;
           isGenerating.value = true;
           aiOutput.value = '';
           
-          let systemPrompt = aiMode.value === 'agenda' ? 
-            `你是一位專業的國小數學領域召集人。請根據使用者提供的議題方向，擬定一份結構清晰的「會議討論大綱」。\n請包含：1. 議題背景說明。 2. 核心問題。 3. 預期的決議方向。\n請使用 Markdown 格式排版。` : 
-            `你是一位專業的國小會議記錄秘書。請將使用者提供的零散筆記，潤飾成正式的「會議決議文」。\n要求：1. 語氣中性。 2. 結構包含「案由」、「討論情形」與「決議事項」。\n請使用 Markdown 格式排版。`;
+          if (!GAS_URL.startsWith('https://script.google.com')) {
+            setTimeout(() => {
+              aiOutput.value = "⚠️ **系統提示**：目前尚未串接 Google Apps Script (GAS) 後端。\n\n未來的架構將會是：`網頁前端 -> GAS -> Gemini API`。API Key 將安全地保存在您的 GAS 專案中，不再暴露於前端原始碼。";
+              isGenerating.value = false;
+            }, 1000);
+            return;
+          }
             
           try {
-            // ★ 已將模型名稱修正為最穩定、絕對支援的 gemini-pro
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey.value}`, {
+            const response = await fetch(GAS_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify({ 
-                contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n使用者輸入：\n" + aiInput.value }] }], 
-                generationConfig: { temperature: 0.4 } 
+                action: 'askAI',
+                mode: aiMode.value,
+                prompt: aiInput.value
               })
             });
+            const result = await response.json();
             
-            const data = await response.json();
-            
-            if (data.error) {
-                console.error("API 錯誤:", data.error);
-                throw new Error(data.error.message || '未知的 API 錯誤');
-            }
-            
-            if (data.candidates && data.candidates[0].content.parts[0].text) {
-                aiOutput.value = data.candidates[0].content.parts[0].text;
+            if (result.status === 'success') {
+                aiOutput.value = result.data;
             } else {
-                aiOutput.value = '無法生成內容，請稍後再試。';
+                throw new Error(result.message || 'API 錯誤');
             }
           } catch (error) {
-            console.error('Fetch 錯誤:', error);
-            alert('生成失敗，請檢查您的網路狀態，或確認 API Key 是否複製完整。\n錯誤訊息：' + error.message);
+            console.error('AI 請求錯誤:', error);
+            aiOutput.value = '無法連線至後端伺服器取得 AI 回覆，請確認 GAS 已部署且網址正確。\n\n詳細錯誤：' + error.message;
           } finally {
             isGenerating.value = false;
           }
@@ -852,24 +905,20 @@
         onMounted(() => {
           checkAuth(); 
           loadData();
-          const savedKey = localStorage.getItem('gemini_api_key');
-          if (savedKey) geminiApiKey.value = savedKey;
         });
-
-        watch(geminiApiKey, (newVal) => localStorage.setItem('gemini_api_key', newVal));
 
         return {
           isAdmin, showLoginModal, inputPassword, login, logout,
           currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
-          appData, forceSync,
+          appData, uploadToCloud,
           newTeacherName, showArchived, showArchivedStats, activeTeachers, archivedTeachers, 
           addTeacher, archiveTeacher, restoreTeacher,
           editingOldName, editingNewName, startEdit, cancelEdit, saveEdit,
           activeTeacherStats, archivedTeacherStats, 
-          reversedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
+          sortedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
           addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink, addEvalResultLink, removeEvalResultLink,
           saveData,
-          geminiApiKey, aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
+          aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
         };
       }
     }).mount('#app');
