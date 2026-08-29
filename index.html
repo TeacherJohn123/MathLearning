@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <!-- ✅ 加入 DOMPurify 預防 XSS 攻擊 -->
+  <!-- DOMPurify 預防 XSS 攻擊 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -91,7 +91,6 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
       <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
         <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
-        <!-- ✅ 修正按鈕名稱 -->
         <button v-if="isAdmin" @click="uploadToCloud" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
           <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 立即上傳雲端
         </button>
@@ -181,7 +180,6 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- ✅ 改用 sortedWorkHistory 實作真正的排序 -->
                     <tr v-for="(rowObj, i) in sortedWorkHistory" :key="rowObj.originalIndex" 
                         class="border-b transition-colors"
                         :class="getYearColorClass(rowObj.row.semester)">
@@ -356,7 +354,6 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="連結名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <!-- ✅ 補上 rel="noopener noreferrer" -->
                     <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
@@ -434,7 +431,6 @@
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500 flex-1 flex flex-col">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-robot mr-2 text-purple-500"></i>會議議案 AI 助手</h3>
-                <!-- ✅ 已移除 API Key 輸入欄位 -->
               </div>
               <div class="flex gap-2 mb-4">
                 <button @click="aiMode = 'agenda'" :class="aiMode === 'agenda' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-lightbulb mr-1"></i> 議案發想與大綱</button>
@@ -444,7 +440,6 @@
                 <div class="w-1/2 flex flex-col">
                   <label class="block text-sm font-medium text-gray-700 mb-1">{{ aiMode === 'agenda' ? '請簡述您想討論的議題方向：' : '請貼上會議中的草稿或零散筆記：' }}</label>
                   <textarea v-model="aiInput" class="w-full flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 resize-none" :placeholder="aiMode === 'agenda' ? '例如：我想討論下學期五年級數學銜接教材的選用...' : '例如：大家同意銜接教材用南一版...'"></textarea>
-                  <!-- ✅ 更新按鈕狀態 -->
                   <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
                     <i v-if="isGenerating" class="fa-solid fa-circle-notch fa-spin mr-2"></i>{{ isGenerating ? 'AI 正在思考中...' : (aiMode === 'agenda' ? '生成討論大綱' : '生成正式會議紀錄') }}
                   </button>
@@ -455,7 +450,6 @@
                     <button v-if="aiOutput" @click="copyAiOutput" class="text-xs text-purple-600 hover:text-purple-800"><i class="fa-regular fa-copy mr-1"></i>複製結果</button>
                   </div>
                   <div class="w-full flex-1 border border-gray-300 rounded-md shadow-sm p-4 bg-gray-50 overflow-y-auto">
-                    <!-- ✅ XSS 防護處理完成的 compiledMarkdown -->
                     <div v-if="aiOutput" v-html="compiledMarkdown" class="prose prose-sm max-w-none"></div>
                     <div v-else class="h-full flex items-center justify-center text-gray-400 text-sm text-center">AI 產生的內容將顯示於此。</div>
                   </div>
@@ -478,25 +472,49 @@
         const showLoginModal = ref(false);
         const inputPassword = ref('');
         
-        // ✅ [安全性更新] 準備正式的 GAS 端點
-        const GAS_URL = https://'script.google.com/macros/s/AKfycbxOSW-ULVb4aLrg-ulkgynBhceavkBHUnuuEMiB2Rx97B1rFA-2JzvqtM3RvhXtsl4vGw/exec'; 
+        // ★ 已經綁定你正式的 GAS 網址 (記得是小寫的 https)
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSW-ULVb4aLrg-ulkgynBhceavkBHUnuuEMiB2Rx97B1rFA-2JzvqtM3RvhXtsl4vGw/exec'; 
 
-        // ✅ [安全性更新] 改用非同步登入邏輯
+        // ★ 真正連線到 GAS 後端驗證密碼
         const login = async () => {
           if (!inputPassword.value) return;
-          try {
-            // 過渡期測試用密碼：test_mode_only
-            if (inputPassword.value === 'test_mode_only') { 
+          
+          if (!GAS_URL.startsWith('https://script.google.com')) {
+            if (inputPassword.value === 'test_mode_only') {
               isAdmin.value = true;
               sessionStorage.setItem('mathAdminAuth', 'temp_token');
               showLoginModal.value = false;
               inputPassword.value = '';
             } else {
-              alert('密碼錯誤！');
+              alert('尚未設定 GAS 網址。本機測試密碼為：test_mode_only');
+              inputPassword.value = '';
+            }
+            return;
+          }
+
+          try {
+            const response = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ 
+                action: 'verifyAdmin', 
+                password: inputPassword.value 
+              })
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data && result.data.token) {
+              isAdmin.value = true;
+              sessionStorage.setItem('mathAdminAuth', result.data.token);
+              showLoginModal.value = false;
+              inputPassword.value = '';
+            } else {
+              alert(result.message || '密碼錯誤！');
               inputPassword.value = '';
             }
           } catch (error) {
             console.error('登入錯誤', error);
+            alert('無法連線至後端驗證伺服器，請檢查網路或 GAS 網址是否正確。');
           }
         };
 
@@ -535,7 +553,7 @@
           eval_results: []
         });
 
-        // ✅ [資料穩定性更新] 資料正規化函式
+        // 資料正規化函式
         const normalizeData = (data) => {
           if (data.workHistory && data.workHistory.length > 0 && data.workHistory[0].convener !== undefined) {
              data.workHistory = data.workHistory.map(row => ({
@@ -556,7 +574,7 @@
           return data;
         };
 
-        // ✅ [邏輯修正] 實作真正的學年度排序
+        // 實作真正的學年度排序
         const sortedWorkHistory = computed(() => {
           if (!appData.value.workHistory) return [];
           return appData.value.workHistory.map((row, index) => ({
@@ -570,7 +588,7 @@
               if (!yearMatch) return 0;
               return parseInt(yearMatch[0]) + (isBottom ? 0.2 : 0.1);
             };
-            return getVal(b.row.semester) - getVal(a.row.semester); // 降冪 (新的在上面)
+            return getVal(b.row.semester) - getVal(a.row.semester);
           });
         });
 
@@ -594,7 +612,6 @@
           return titles[currentView.value];
         });
 
-        // ✅ [UI更新] 更精確的同步狀態顯示
         const syncStatusText = computed(() => {
           if (syncStatus.value === 'syncing') return '雲端同步中...';
           if (syncStatus.value === 'error') return '同步失敗 (僅存本機)';
@@ -656,7 +673,6 @@
 
         const addTeacher = () => {
           if (!isAdmin.value) return;
-          // ✅ [邏輯修正] 過濾掉誤打的「老師」兩字
           const name = newTeacherName.value.trim().replace(/老師$/, '');
           if (!name) return;
           
@@ -708,7 +724,6 @@
         const saveEdit = () => {
           if (!isAdmin.value) return;
           const oldName = editingOldName.value;
-          // ✅ [邏輯修正] 過濾掉誤打的「老師」兩字
           const newName = editingNewName.value.trim().replace(/老師$/, '');
 
           if (!newName || newName === oldName) {
@@ -761,7 +776,7 @@
         const addEvalResultLink = () => { if(isAdmin.value) { appData.value.eval_results.push({ title: '', url: '' }); saveData(); } };
         const removeEvalResultLink = (index) => { if(isAdmin.value) { appData.value.eval_results.splice(index, 1); saveData(); } };
 
-        // ✅ [資料穩定性更新] 加入 try/catch 防護網
+        // 加入 try/catch 防護網
         const loadData = async () => {
           const localData = localStorage.getItem('mathDeptData');
           if (localData) {
@@ -773,7 +788,6 @@
               appData.value = normalizeData({});
             }
           } else {
-             // 給予預設測試資料 (第一次開啟時)
              appData.value = normalizeData({
                teachers: ['陳奕任', '林孟瑜', '徐毓璘', '陳秀琴'],
                workHistory: [{ semester: '112學年上學期', convener_original: '陳奕任' }]
@@ -798,10 +812,9 @@
           }
         };
 
-        // ✅ [資料穩定性更新] 加入 Debounce 防抖存檔，避免連續修改蓋掉資料
+        // 加入 Debounce 防抖存檔
         let saveTimeout = null;
         const saveData = () => {
-          // 1. 本機即時儲存 (保底)
           localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
           
           if (!GAS_URL.startsWith('https://script.google.com')) {
@@ -810,7 +823,6 @@
              return;
           }
 
-          // 2. 雲端同步延遲執行 (防資料競爭)
           syncStatus.value = 'syncing';
           clearTimeout(saveTimeout);
           saveTimeout = setTimeout(async () => {
@@ -819,10 +831,9 @@
             } catch (error) {
               syncStatus.value = 'error';
             }
-          }, 2000); // 停止修改 2 秒後才上傳
+          }, 2000); 
         };
 
-        // 實際執行雲端上傳的邏輯
         const actualSaveToGAS = async () => {
           const response = await fetch(GAS_URL, {
             method: 'POST',
@@ -854,14 +865,14 @@
           }
         };
 
-        // ✅ [安全性更新] DOMPurify 過濾 XSS
+        // DOMPurify 過濾 XSS
         const compiledMarkdown = computed(() => {
           if (!aiOutput.value) return '';
           const rawHtml = marked.parse(aiOutput.value);
           return window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
         });
 
-        // ✅ [架構更新] 改由 GAS 代理呼叫 Gemini，金鑰藏在後端
+        // 改由 GAS 代理呼叫 Gemini
         const callGeminiAPI = async () => {
           if (!aiInput.value.trim()) return;
           isGenerating.value = true;
