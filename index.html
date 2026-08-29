@@ -296,10 +296,15 @@
             <!-- 職位次數統計 -->
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-emerald-500">
               <h3 class="text-lg font-medium text-gray-800 mb-4"><i class="fa-solid fa-chart-pie mr-2 text-emerald-500"></i>各職位擔任次數統計</h3>
-              <p class="text-xs text-gray-500 mb-4 bg-yellow-50 p-2 border border-yellow-200 rounded">
-                <i class="fa-solid fa-circle-info mr-1 text-yellow-600"></i> 
-                統計規則：若由「非現任領域成員」代理，次數累加至「原定負責人」；若由「現任領域成員」代理，次數則算在「代理人」身上。
-              </p>
+              
+              <div class="text-xs text-gray-600 mb-4 bg-yellow-50 p-3 border border-yellow-200 rounded leading-relaxed">
+                <div class="font-bold text-yellow-700 mb-1"><i class="fa-solid fa-circle-info mr-1"></i>計次規則說明：</div>
+                <ul class="list-disc list-inside space-y-1 ml-1">
+                  <li>若代理人為<span class="font-semibold text-blue-600">「現任領域成員」</span>：表示領域內老師互助，次數算在<span class="font-semibold">「代理人」</span>身上（實際執行者）。</li>
+                  <li>若代理人為<span class="font-semibold text-gray-500">「非現任領域成員」</span>：如外聘、代課老師或轉領域，次數則算在<span class="font-semibold">「原定負責人」</span>身上。</li>
+                  <li>若代理人與先前被代理人均為<span class="font-semibold text-blue-600">「現任領域成員」</span>：則統計次數為實際執行者（即<span class="font-semibold">代理人</span>）。</li>
+                </ul>
+              </div>
               
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div v-for="stat in activeTeacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
