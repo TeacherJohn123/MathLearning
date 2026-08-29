@@ -176,12 +176,12 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(rowObj, i) in reversedWorkHistory" :key="rowObj.originalIndex" 
+                    <tr v-for="(rowObj, i) in sortedWorkHistory" :key="rowObj.originalIndex" 
                         class="border-b transition-colors"
                         :class="getYearColorClass(rowObj.row.semester)">
                       
                       <td class="px-4 py-4 align-top">
-                        <input v-if="isAdmin" v-model="rowObj.row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm font-medium focus:ring-blue-500 focus:border-blue-500 bg-white/60" placeholder="例如: 115學年上學期">
+                        <input v-if="isAdmin" v-model.lazy="rowObj.row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm font-medium focus:ring-blue-500 focus:border-blue-500 bg-white/60" placeholder="例如: 115學年上學期">
                         <span v-else class="text-sm font-bold text-gray-700">{{ rowObj.row.semester || '-' }}</span>
                       </td>
                       
@@ -198,7 +198,6 @@
                             </optgroup>
                           </select>
                           <div class="flex items-center gap-1 mt-1">
-                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
                             <select v-model="rowObj.row.convener_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
                               <option value="">無</option>
                               <optgroup label="現任領域成員">
@@ -208,12 +207,13 @@
                                 <option v-for="t in archivedTeachers" :key="'a-archived-'+t" :value="t">{{ t }}</option>
                               </optgroup>
                             </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
                           </div>
                         </div>
                         <div v-else class="text-sm">
                            <div class="font-bold text-gray-800 text-base">{{ rowObj.row.convener_original || '-' }}</div>
                            <div v-if="rowObj.row.convener_actual && rowObj.row.convener_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
-                             代理: {{ rowObj.row.convener_actual }}
+                             {{ rowObj.row.convener_actual }}代理
                            </div>
                         </div>
                       </td>
@@ -231,7 +231,6 @@
                             </optgroup>
                           </select>
                           <div class="flex items-center gap-1 mt-1">
-                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
                             <select v-model="rowObj.row.training_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
                               <option value="">無</option>
                               <optgroup label="現任領域成員">
@@ -241,12 +240,13 @@
                                 <option v-for="t in archivedTeachers" :key="'a-archived-'+t" :value="t">{{ t }}</option>
                               </optgroup>
                             </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
                           </div>
                         </div>
                         <div v-else class="text-sm">
                            <div class="font-bold text-gray-800 text-base">{{ rowObj.row.training_original || '-' }}</div>
                            <div v-if="rowObj.row.training_actual && rowObj.row.training_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
-                             代理: {{ rowObj.row.training_actual }}
+                             {{ rowObj.row.training_actual }}代理
                            </div>
                         </div>
                       </td>
@@ -264,7 +264,6 @@
                             </optgroup>
                           </select>
                           <div class="flex items-center gap-1 mt-1">
-                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理:</span>
                             <select v-model="rowObj.row.minutes_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
                               <option value="">無</option>
                               <optgroup label="現任領域成員">
@@ -274,12 +273,13 @@
                                 <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
                               </optgroup>
                             </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
                           </div>
                         </div>
                         <div v-else class="text-sm">
                            <div class="font-bold text-gray-800 text-base">{{ rowObj.row.minutes_original || '-' }}</div>
                            <div v-if="rowObj.row.minutes_actual && rowObj.row.minutes_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
-                             代理: {{ rowObj.row.minutes_actual }}
+                             {{ rowObj.row.minutes_actual }}代理
                            </div>
                         </div>
                       </td>
@@ -548,12 +548,42 @@
           eval_results: []
         });
 
-        const reversedWorkHistory = computed(() => {
+        // 智慧解析年份與學期來進行絕對排序 (由大到小)
+        const sortedWorkHistory = computed(() => {
           if (!appData.value.workHistory) return [];
+          
           return appData.value.workHistory.map((row, index) => ({
             row: row,
             originalIndex: index
-          })).reverse();
+          })).sort((a, b) => {
+            const parseSemester = (str) => {
+              // 若為空白 (新增的列)，給予極大值讓它保證置頂
+              if (!str || !str.trim()) return { year: 9999, term: 9999 }; 
+              
+              // 擷取連續數字作為年份 (如 "112學年" -> 112)
+              const yMatch = str.match(/\d+/);
+              const year = yMatch ? parseInt(yMatch[0], 10) : -1;
+              
+              // 判定上下學期 (下學期權重設為 2，上學期為 1)
+              let term = 0;
+              if (str.includes('下')) term = 2;
+              else if (str.includes('上')) term = 1;
+              
+              return { year, term };
+            };
+            
+            const pA = parseSemester(a.row.semester);
+            const pB = parseSemester(b.row.semester);
+            
+            // 1. 先比年份 (年份大的排上面)
+            if (pA.year !== pB.year) return pB.year - pA.year; 
+            
+            // 2. 年份相同比學期 (下學期=2 > 上學期=1)
+            if (pA.term !== pB.term) return pB.term - pA.term; 
+            
+            // 3. 完全相同，或是都無法解析，則依照原本順序(新的在上面)
+            return b.originalIndex - a.originalIndex;
+          });
         });
 
         const getYearColorClass = (semesterStr) => {
@@ -810,7 +840,6 @@
           return marked.parse(aiOutput.value);
         });
 
-        // 呼叫 Gemini API 的核心方法
         const callGeminiAPI = async () => {
           if (!geminiApiKey.value) { alert('請先輸入 Gemini API Key'); return; }
           isGenerating.value = true;
@@ -869,7 +898,7 @@
           addTeacher, archiveTeacher, restoreTeacher,
           editingOldName, editingNewName, startEdit, cancelEdit, saveEdit,
           activeTeacherStats, archivedTeacherStats, 
-          reversedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
+          sortedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
           addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink, addEvalResultLink, removeEvalResultLink,
           saveData,
           geminiApiKey, aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
