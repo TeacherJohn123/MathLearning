@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>數學領域 - 歷年工作執掌與統計系統</title>
+  <title>數學領域 - 學習資料管理系統</title>
   <style>
     :root {
       --primary-color: #2563eb;
       --primary-hover: #1d4ed8;
-      --bg-color: #f8fafc;
+      --bg-color: #f1f5f9;
       --card-bg: #ffffff;
+      --sidebar-bg: #1e293b;
+      --sidebar-hover: #334155;
       --text-main: #1e293b;
       --text-muted: #64748b;
       --border-color: #e2e8f0;
@@ -17,14 +19,74 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
-      padding: 24px;
       line-height: 1.5;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; }
+    /* ================= 佈局：左側欄位 ================= */
+    .sidebar {
+      width: 260px;
+      background-color: var(--sidebar-bg);
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 24px 20px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-menu {
+      flex: 1;
+      padding: 20px 0;
+      overflow-y: auto;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 24px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+    }
+    .menu-item:hover {
+      background-color: var(--sidebar-hover);
+      color: #fff;
+    }
+    .menu-item.active {
+      background-color: var(--sidebar-hover);
+      color: #fff;
+      border-left-color: #3b82f6; /* 亮藍色標記 */
+    }
+    .menu-item.admin-only {
+      color: #fca5a5; /* 微微的紅色/粉色區分管理員功能 */
+    }
+    .menu-item.admin-only.active {
+      border-left-color: #ef4444;
+    }
+
+    /* ================= 佈局：右側主內容區 ================= */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; width: 100%; }
 
     /* 頂部標題與管理員列 */
     header {
@@ -149,99 +211,195 @@
     .stats-highlight { font-weight: 700; color: var(--primary-color); }
 
     .disabled-action { opacity: 0.6; pointer-events: none; }
+
+    /* 分頁顯示控制 */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .placeholder-content {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <!-- 頁面標頭與管理者驗證 -->
-  <header>
-    <h1>📐 數學領域 - 歷年工作執掌分配與次數統計</h1>
-    <div class="admin-bar">
-      <span id="adminBadge" class="status-badge status-locked">🔒 唯讀檢視模式</span>
-      <div id="loginArea">
-        <input type="password" id="adminPwdInput" placeholder="輸入管理密碼">
-        <button class="btn-primary btn-sm" onclick="handleLogin()">解鎖編輯</button>
-      </div>
-      <button id="logoutBtn" class="btn-outline btn-sm" style="display:none;" onclick="handleLogout()">鎖定離開</button>
-    </div>
-  </header>
+<!-- 左側欄位 -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    📐 數學領域系統
+  </div>
+  <nav class="sidebar-menu">
+    <a class="menu-item active" onclick="switchTab('tab-duties', this)">歷年工作執掌與統計</a>
+    <a class="menu-item" onclick="switchTab('tab-meetings', this)">歷年會議記錄</a>
+    <a class="menu-item" onclick="switchTab('tab-plans', this)">歷年評鑑計劃</a>
+    <a class="menu-item" onclick="switchTab('tab-results', this)">歷年評鑑結果</a>
+    <a class="menu-item" onclick="switchTab('tab-materials', this)">數學領域相關資料</a>
+    
+    <!-- 預設隱藏，只有管理者解鎖後才會顯示 -->
+    <a class="menu-item admin-only" id="menuAiRecords" onclick="switchTab('tab-ai', this)" style="display: none;">
+      🔒 人工智慧會議記錄
+    </a>
+  </nav>
+</aside>
 
-  <!-- 區塊 1：領域教師名單管理 -->
-  <section class="section-card">
-    <div class="section-header">
-      <span class="section-title">👩‍🏫 領域教師名單</span>
-      <div class="admin-controls disabled-action" id="teacherAdminControl">
-        <input type="text" id="newTeacherName" placeholder="輸入教師姓名">
-        <button class="btn-primary btn-sm" onclick="addTeacher()">新增教師</button>
-      </div>
-    </div>
-    <div class="teachers-layout">
-      <!-- 現任教師 -->
-      <div class="teacher-column">
-        <div class="teacher-column-title">
-          <span>現任領域教師</span>
-          <span id="currentCount" style="color: #16a34a;">0 位</span>
+<!-- 右側主內容區 -->
+<main class="main-wrapper">
+  <div class="container">
+    
+    <!-- 頁面標頭與管理者驗證 (固定在右側上方) -->
+    <header>
+      <h1 id="pageTitle">歷年工作執掌分配與次數統計</h1>
+      <div class="admin-bar">
+        <span id="adminBadge" class="status-badge status-locked">🔒 唯讀檢視模式</span>
+        <div id="loginArea">
+          <input type="password" id="adminPwdInput" placeholder="輸入管理密碼">
+          <button class="btn-primary btn-sm" onclick="handleLogin()">解鎖編輯</button>
         </div>
-        <div class="teacher-tags" id="currentTeachersList"></div>
+        <button id="logoutBtn" class="btn-outline btn-sm" style="display:none;" onclick="handleLogout()">鎖定離開</button>
       </div>
-      <!-- 非現任教師 -->
-      <div class="teacher-column">
-        <div class="teacher-column-title">
-          <span>非現任領域教師 (曾任/調任)</span>
-          <span id="formerCount" style="color: var(--text-muted);">0 位</span>
-        </div>
-        <div class="teacher-tags" id="formerTeachersList"></div>
-      </div>
-    </div>
-  </section>
+    </header>
 
-  <!-- 區塊 2：歷年工作執掌分配 (一學期為一列) -->
-  <section class="section-card">
-    <div class="section-header">
-      <span class="section-title">📅 歷年工作職責分配</span>
-      <div class="admin-controls disabled-action" id="semesterAdminControl">
-        <input type="text" id="newSemesterName" placeholder="例如：115學年上">
-        <button class="btn-primary btn-sm" onclick="addSemester()">新增學期</button>
+    <!-- 【分頁1】歷年工作執掌與統計 (原本的主功能) -->
+    <div id="tab-duties" class="tab-content active">
+      <!-- 區塊 1：領域教師名單管理 -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-title">👩‍🏫 領域教師名單</span>
+          <div class="admin-controls disabled-action" id="teacherAdminControl">
+            <input type="text" id="newTeacherName" placeholder="輸入教師姓名">
+            <button class="btn-primary btn-sm" onclick="addTeacher()">新增教師</button>
+          </div>
+        </div>
+        <div class="teachers-layout">
+          <div class="teacher-column">
+            <div class="teacher-column-title">
+              <span>現任領域教師</span>
+              <span id="currentCount" style="color: #16a34a;">0 位</span>
+            </div>
+            <div class="teacher-tags" id="currentTeachersList"></div>
+          </div>
+          <div class="teacher-column">
+            <div class="teacher-column-title">
+              <span>非現任領域教師 (曾任/調任)</span>
+              <span id="formerCount" style="color: var(--text-muted);">0 位</span>
+            </div>
+            <div class="teacher-tags" id="formerTeachersList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 2：歷年工作執掌分配 -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-title">📅 歷年工作職責分配</span>
+          <div class="admin-controls disabled-action" id="semesterAdminControl">
+            <input type="text" id="newSemesterName" placeholder="例如：115學年上">
+            <button class="btn-primary btn-sm" onclick="addSemester()">新增學期</button>
+          </div>
+        </div>
+        <div class="semester-list" id="semesterContainer">
+          <!-- 學期列由 JS 動態生成 -->
+        </div>
+      </section>
+
+      <!-- 區塊 3：歷年工作執掌次數統計 -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-title">📊 現任領域教師歷年工作次數統計</span>
+          <span style="font-size:0.8rem; color:var(--text-muted);">依據代理實質工作規則自動累計</span>
+        </div>
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>現任教師姓名</th>
+              <th>召集人 (次)</th>
+              <th>參加研習 (次)</th>
+              <th>會議記錄 (次)</th>
+              <th>總計 (次)</th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody">
+            <!-- 統計數據由 JS 即時計算生成 -->
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- 【其他分頁】擴充區塊 (預留版面) -->
+    <div id="tab-meetings" class="tab-content">
+      <div class="placeholder-content">
+        <h2>歷年會議記錄</h2>
+        <p>此區塊功能建置中，未來可在此上傳或瀏覽各學期會議記錄文件。</p>
       </div>
     </div>
     
-    <div class="semester-list" id="semesterContainer">
-      <!-- 學期列由 JS 動態生成 -->
+    <div id="tab-plans" class="tab-content">
+      <div class="placeholder-content">
+        <h2>歷年評鑑計劃</h2>
+        <p>此區塊功能建置中，將顯示歷年評鑑計劃相關檔案。</p>
+      </div>
     </div>
-  </section>
 
-  <!-- 區塊 3：歷年工作執掌次數統計 -->
-  <section class="section-card">
-    <div class="section-header">
-      <span class="section-title">📊 現任領域教師歷年工作次數統計</span>
-      <span style="font-size:0.8rem; color:var(--text-muted);">依據代理實質工作規則自動累計</span>
+    <div id="tab-results" class="tab-content">
+      <div class="placeholder-content">
+        <h2>歷年評鑑結果</h2>
+        <p>此區塊功能建置中，將顯示歷年評鑑結果相關資料。</p>
+      </div>
     </div>
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th>現任教師姓名</th>
-          <th>召集人 (次)</th>
-          <th>參加研習 (次)</th>
-          <th>會議記錄 (次)</th>
-          <th>總計 (次)</th>
-        </tr>
-      </thead>
-      <tbody id="statsTableBody">
-        <!-- 統計數據由 JS 即時計算生成 -->
-      </tbody>
-    </table>
-  </section>
-</div>
+
+    <div id="tab-materials" class="tab-content">
+      <div class="placeholder-content">
+        <h2>數學領域相關資料</h2>
+        <p>此區塊功能建置中，可作為領域內教材、教案的共用雲端空間。</p>
+      </div>
+    </div>
+
+    <div id="tab-ai" class="tab-content">
+      <div class="placeholder-content" style="border: 2px dashed #ef4444;">
+        <h2 style="color: #ef4444;">🔒 人工智慧會議記錄 (管理者專區)</h2>
+        <p>此區塊為機密資料，僅有解鎖編輯模式的管理者可以看見與操作。</p>
+      </div>
+    </div>
+
+  </div>
+</main>
 
 <script>
-  // 預設調色盤：每學期自動循環指定淡雅背景色
+  // ==========================================
+  // 分頁切換功能
+  // ==========================================
+  function switchTab(tabId, element) {
+    // 隱藏所有分頁
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    // 移除選單的 active 狀態
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.classList.remove('active');
+    });
+
+    // 顯示指定分頁
+    document.getElementById(tabId).classList.add('active');
+    // 設定當前點擊的選單為 active
+    element.classList.add('active');
+    
+    // 更新右側頂部標題
+    document.getElementById('pageTitle').textContent = element.textContent.replace('🔒', '').trim();
+  }
+
+
+  // ==========================================
+  // 原有系統核心邏輯與資料
+  // ==========================================
   const SEMESTER_PALETTE = [
     '#eff6ff', '#fdf2f8', '#f0fdf4', '#fefce8', 
     '#faf5ff', '#fff7ed', '#f0fdfa', '#f5f3ff'
   ];
 
-  // 系統核心資料模型
   let state = {
     isAdmin: false,
     teachers: [
@@ -254,25 +412,20 @@
       { id: "s114-2", name: "114學年下", color: "#eff6ff" },
       { id: "s114-1", name: "114學年上", color: "#fdf2f8" },
       { id: "s113-2", name: "113學年下", color: "#f0fdf4" },
-      { id: "s113-1", name: "113學年上", color: "#fefce8" },
-      { id: "s112-2", name: "112學年下", color: "#faf5ff" },
-      { id: "s112-1", name: "112學年上", color: "#fff7ed" }
+      { id: "s113-1", name: "113學年上", color: "#fefce8" }
     ],
     duties: {
-      // 結構: { '學期ID_職務名': { primary: '教師ID', substitute: '教師ID或空' } }
       's114-2_召集人': { primary: 't1', substitute: '' },
       's114-2_參加研習': { primary: 't2', substitute: '' },
       's114-2_會議記錄': { primary: 't3', substitute: '' },
-      
-      's114-1_召集人': { primary: 't2', substitute: 't1' }, // 代理示範
+      's114-1_召集人': { primary: 't2', substitute: 't1' }, 
       's114-1_參加研習': { primary: 't3', substitute: '' },
-      's114-1_會議記錄': { primary: 't4', substitute: 't1' } // 非現任被現任代理
+      's114-1_會議記錄': { primary: 't4', substitute: 't1' }
     }
   };
 
   const ROLES = ["召集人", "參加研習", "會議記錄"];
 
-  // 初始化載入
   window.onload = () => {
     renderAll();
   };
@@ -285,11 +438,11 @@
   }
 
   // ==========================================
-  // 管理者權限機制
+  // 管理者權限機制 (包含左側選單控制)
   // ==========================================
   function handleLogin() {
     const pwd = document.getElementById('adminPwdInput').value;
-    if (pwd === "admin_password_123" || pwd === "1234") { // 預設測試密碼
+    if (pwd === "admin_password_123" || pwd === "1234") {
       state.isAdmin = true;
       document.getElementById('adminPwdInput').value = '';
       renderAll();
@@ -300,6 +453,12 @@
 
   function handleLogout() {
     state.isAdmin = false;
+    
+    // 若管理者退出時剛好停留在 AI 分頁，則自動切回首頁
+    const aiTab = document.getElementById('tab-ai');
+    if(aiTab.classList.contains('active')){
+       switchTab('tab-duties', document.querySelector('.menu-item')); 
+    }
     renderAll();
   }
 
@@ -310,6 +469,9 @@
     
     const teacherControl = document.getElementById('teacherAdminControl');
     const semesterControl = document.getElementById('semesterAdminControl');
+    
+    // 【新增】控制左側的「人工智慧會議記錄」選單
+    const menuAiRecords = document.getElementById('menuAiRecords');
 
     if (state.isAdmin) {
       badge.textContent = "🔓 管理者編輯模式";
@@ -319,6 +481,9 @@
 
       teacherControl.classList.remove('disabled-action');
       semesterControl.classList.remove('disabled-action');
+      
+      // 顯示專屬選單
+      menuAiRecords.style.display = "flex";
     } else {
       badge.textContent = "🔒 唯讀檢視模式";
       badge.className = "status-badge status-locked";
@@ -327,43 +492,32 @@
 
       teacherControl.classList.add('disabled-action');
       semesterControl.classList.add('disabled-action');
+      
+      // 隱藏專屬選單
+      menuAiRecords.style.display = "none";
     }
   }
 
-  // ==========================================
-  // 教師名單管理模組
-  // ==========================================
+  // 以下為原本的渲染與計算邏輯 (完全保留)
   function renderTeacherManagement() {
     const currentList = document.getElementById('currentTeachersList');
     const formerList = document.getElementById('formerTeachersList');
-    
-    currentList.innerHTML = '';
-    formerList.innerHTML = '';
-
-    let currentCount = 0;
-    let formerCount = 0;
+    currentList.innerHTML = ''; formerList.innerHTML = '';
+    let currentCount = 0, formerCount = 0;
 
     state.teachers.forEach(teacher => {
       const chip = document.createElement('div');
       chip.className = 'teacher-chip';
-
       if (teacher.isCurrent) {
         currentCount++;
-        chip.innerHTML = `
-          <span>${teacher.name}</span>
-          ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')" title="改為非現任">轉非現任 ⇄</button>` : ''}
-        `;
+        chip.innerHTML = `<span>${teacher.name}</span> ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')">轉非現任 ⇄</button>` : ''}`;
         currentList.appendChild(chip);
       } else {
         formerCount++;
-        chip.innerHTML = `
-          <span>${teacher.name}</span>
-          ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')" title="改為現任">轉現任 ⇄</button>` : ''}
-        `;
+        chip.innerHTML = `<span>${teacher.name}</span> ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')">轉現任 ⇄</button>` : ''}`;
         formerList.appendChild(chip);
       }
     });
-
     document.getElementById('currentCount').textContent = `${currentCount} 位`;
     document.getElementById('formerCount').textContent = `${formerCount} 位`;
   }
@@ -372,28 +526,16 @@
     const nameInput = document.getElementById('newTeacherName');
     const name = nameInput.value.trim();
     if (!name) return alert("請輸入教師姓名");
-
-    const newTeacher = {
-      id: 't_' + Date.now(),
-      name: name,
-      isCurrent: true
-    };
-    state.teachers.push(newTeacher);
+    state.teachers.push({ id: 't_' + Date.now(), name: name, isCurrent: true });
     nameInput.value = '';
     renderAll();
   }
 
   function toggleTeacherRole(id) {
     const teacher = state.teachers.find(t => t.id === id);
-    if (teacher) {
-      teacher.isCurrent = !teacher.isCurrent;
-      renderAll();
-    }
+    if (teacher) { teacher.isCurrent = !teacher.isCurrent; renderAll(); }
   }
 
-  // ==========================================
-  // 歷年學期執掌模組 (每學期為一列)
-  // ==========================================
   function renderSemesters() {
     const container = document.getElementById('semesterContainer');
     container.innerHTML = '';
@@ -402,41 +544,29 @@
       const row = document.createElement('div');
       row.className = 'semester-row';
       row.style.backgroundColor = sem.color;
-
       let dutyColsHTML = '';
       ROLES.forEach(role => {
         const key = `${sem.id}_${role}`;
         const currentDuty = state.duties[key] || { primary: '', substitute: '' };
-
         dutyColsHTML += `
           <div class="duty-cell">
             <span class="duty-label">${role}</span>
             <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutyPrimary('${key}', this.value)">
-              <option value="">-- 請選擇負責人 --</option>
-              ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.primary ? 'selected' : ''}>${t.name} ${!t.isCurrent ? '(非現任)' : ''}</option>`).join('')}
+              <option value="">-- 請選擇 --</option>
+              ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.primary ? 'selected' : ''}>${t.name} ${!t.isCurrent ? '(非)' : ''}</option>`).join('')}
             </select>
             <div class="sub-select-wrap">
               <span>由</span>
               <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutySubstitute('${key}', this.value)">
-                <option value="">無 (原負責人)</option>
+                <option value="">無</option>
                 ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.substitute ? 'selected' : ''}>${t.name}</option>`).join('')}
               </select>
               <span>代理</span>
             </div>
-          </div>
-        `;
+          </div>`;
       });
-
-      const delBtnHTML = state.isAdmin ? `
-        <button class="btn-danger btn-sm" onclick="removeSemester('${sem.id}')" title="刪除此學期">✕</button>
-      ` : `<div></div>`;
-
-      row.innerHTML = `
-        <div class="semester-name">${sem.name}</div>
-        ${dutyColsHTML}
-        ${delBtnHTML}
-      `;
-
+      const delBtnHTML = state.isAdmin ? `<button class="btn-danger btn-sm" onclick="removeSemester('${sem.id}')">✕</button>` : `<div></div>`;
+      row.innerHTML = `<div class="semester-name">${sem.name}</div>${dutyColsHTML}${delBtnHTML}`;
       container.appendChild(row);
     });
   }
@@ -445,15 +575,7 @@
     const input = document.getElementById('newSemesterName');
     const name = input.value.trim();
     if (!name) return alert("請輸入學期名稱");
-
-    const color = SEMESTER_PALETTE[state.semesters.length % SEMESTER_PALETTE.length];
-    const newSem = {
-      id: 's_' + Date.now(),
-      name: name,
-      color: color
-    };
-
-    state.semesters.unshift(newSem); // 新學期插在最上方
+    state.semesters.unshift({ id: 's_' + Date.now(), name: name, color: SEMESTER_PALETTE[state.semesters.length % SEMESTER_PALETTE.length] });
     input.value = '';
     renderAll();
   }
@@ -466,36 +588,22 @@
 
   function updateDutyPrimary(key, val) {
     if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
-    state.duties[key].primary = val;
-    calculateAndRenderStats();
+    state.duties[key].primary = val; calculateAndRenderStats();
   }
 
   function updateDutySubstitute(key, val) {
     if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
-    state.duties[key].substitute = val;
-    calculateAndRenderStats();
+    state.duties[key].substitute = val; calculateAndRenderStats();
   }
 
-  // ==========================================
-  // 核心統計演算法 (情境 A~F 實作)
-  // ==========================================
   function calculateAndRenderStats() {
     const teacherMap = {};
     state.teachers.forEach(t => { teacherMap[t.id] = t; });
-
-    // 初始化所有「現任」教師的統計容器
     const stats = {};
     state.teachers.filter(t => t.isCurrent).forEach(t => {
-      stats[t.id] = {
-        name: t.name,
-        "召集人": 0,
-        "參加研習": 0,
-        "會議記錄": 0,
-        total: 0
-      };
+      stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 };
     });
 
-    // 遍歷所有學期的各項職務
     state.semesters.forEach(sem => {
       ROLES.forEach(role => {
         const key = `${sem.id}_${role}`;
@@ -504,27 +612,15 @@
 
         const primaryTeacher = teacherMap[duty.primary];
         const subTeacher = duty.substitute ? teacherMap[duty.substitute] : null;
-
         let creditToTeacherId = null;
 
         if (!subTeacher) {
-          // 情境 A & B：無代理人
-          if (primaryTeacher && primaryTeacher.isCurrent) {
-            creditToTeacherId = primaryTeacher.id; // 情境 A
-          }
+          if (primaryTeacher && primaryTeacher.isCurrent) creditToTeacherId = primaryTeacher.id;
         } else {
-          // 有代理人情況
-          if (subTeacher.isCurrent) {
-            creditToTeacherId = subTeacher.id; // 情境 C & E: 代理人現任 -> 算代理人
-          } else {
-            if (primaryTeacher && primaryTeacher.isCurrent) {
-              creditToTeacherId = primaryTeacher.id; // 情境 D: 代理人非現任，原負責人現任 -> 算原負責人
-            }
-            // 情境 F: 兩者皆非現任 -> 不累計 (creditToTeacherId 為 null)
-          }
+          if (subTeacher.isCurrent) creditToTeacherId = subTeacher.id; 
+          else if (primaryTeacher && primaryTeacher.isCurrent) creditToTeacherId = primaryTeacher.id;
         }
 
-        // 寫入累計
         if (creditToTeacherId && stats[creditToTeacherId]) {
           stats[creditToTeacherId][role]++;
           stats[creditToTeacherId].total++;
@@ -532,27 +628,18 @@
       });
     });
 
-    // 渲染統計結果
     const tbody = document.getElementById('statsTableBody');
     tbody.innerHTML = '';
-
-    const currentTeacherList = state.teachers.filter(t => t.isCurrent);
-    if (currentTeacherList.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">目前無現任領域教師</td></tr>`;
-      return;
-    }
-
-    currentTeacherList.forEach(t => {
+    const currentList = state.teachers.filter(t => t.isCurrent);
+    if (currentList.length === 0) return tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">目前無現任教師</td></tr>`;
+    
+    currentList.forEach(t => {
       const data = stats[t.id];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+      tbody.innerHTML += `<tr>
         <td><strong>${data.name}</strong></td>
-        <td>${data["召集人"]}</td>
-        <td>${data["參加研習"]}</td>
-        <td>${data["會議記錄"]}</td>
+        <td>${data["召集人"]}</td><td>${data["參加研習"]}</td><td>${data["會議記錄"]}</td>
         <td class="stats-highlight">${data.total}</td>
-      `;
-      tbody.appendChild(tr);
+      </tr>`;
     });
   }
 </script>
