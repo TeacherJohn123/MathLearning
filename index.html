@@ -16,60 +16,50 @@
       --text-muted: #64748b;
       --border-color: #e2e8f0;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      line-height: 1.5;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* ================= 佈局：左側欄位 ================= */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; display: flex; height: 100vh; overflow: hidden; }
+    
+    /* 佈局：左側欄位 */
     .sidebar { width: 260px; background-color: var(--sidebar-bg); color: #f8fafc; display: flex; flex-direction: column; flex-shrink: 0; }
     .sidebar-header { padding: 24px 20px; font-size: 1.25rem; font-weight: 700; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 10px; }
     .sidebar-menu { flex: 1; padding: 20px 0; overflow-y: auto; }
     .menu-item { display: flex; align-items: center; padding: 14px 24px; color: #cbd5e1; text-decoration: none; font-weight: 500; transition: all 0.2s; cursor: pointer; border-left: 4px solid transparent; }
     .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: #fff; }
     .menu-item.active { border-left-color: #3b82f6; }
-    .menu-item.admin-only { color: #fca5a5; }
+    .menu-item.admin-only { color: #fca5a5; display: none; }
     .menu-item.admin-only.active { border-left-color: #ef4444; }
 
-    /* ================= 佈局：右側主內容區 ================= */
-    .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 24px; }
+    /* 佈局：右側主內容區 */
+    .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 24px; position: relative; }
     .container { max-width: 1100px; margin: 0 auto; width: 100%; }
-
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: var(--card-bg); padding: 16px 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     h1 { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
     .admin-bar { display: flex; align-items: center; gap: 10px; }
     .status-badge { padding: 4px 10px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
     .status-locked { background-color: #fee2e2; color: #dc2626; }
     .status-unlocked { background-color: #dcfce7; color: #16a34a; }
-
+    
     button { padding: 6px 14px; border: 1px solid transparent; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
     .btn-primary { background: var(--primary-color); color: #fff; }
     .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
     .btn-outline { background: transparent; border-color: var(--border-color); color: var(--text-main); }
     .btn-outline:hover { background: #f1f5f9; }
     .btn-danger { background: #ef4444; color: #fff; }
-    .btn-danger:hover { background: #dc2626; }
     .btn-sm { padding: 3px 8px; font-size: 0.75rem; }
-
-    input[type="text"], input[type="password"], input[type="number"], select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem; outline: none; }
-    input:focus, select:focus { border-color: var(--primary-color); }
-
+    input[type="text"], input[type="password"], select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem; outline: none; }
+    
     .section-card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
     .section-title { font-size: 1.15rem; font-weight: 600; }
-
-    .disabled-action { opacity: 0.6; pointer-events: none; display: none !important; }
+    .disabled-action { display: none !important; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    
+    /* 載入遮罩 */
+    #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; font-size: 1.2rem; font-weight: bold; color: var(--primary-color); }
 
-    /* 教師名單與執掌區塊 (延續之前樣式) */
+    /* 教師名單與執掌區塊 */
     .teachers-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .teacher-column { background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); }
     .teacher-column-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; }
@@ -82,28 +72,24 @@
     .duty-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
     .sub-select-wrap { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
     
-    .rules-box { background-color: #f8fafc; border-left: 4px solid var(--primary-color); padding: 12px 16px; border-radius: 6px; font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; line-height: 1.6; }
+    /* 統計網格 */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
     .stat-card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px; }
     .stat-card-header { font-size: 1.15rem; font-weight: 700; border-bottom: 2px dashed #e2e8f0; padding-bottom: 10px; text-align: center; }
     .stat-item { display: flex; justify-content: space-between; font-size: 0.9rem; color: #475569; }
     .stat-total { display: flex; justify-content: space-between; font-weight: 700; color: var(--primary-color); font-size: 1.05rem; background: #eff6ff; padding: 10px 14px; border-radius: 8px; margin-top: auto; }
 
-    /* ================= 新增：檔案連結清單樣式 ================= */
+    /* 檔案連結清單 */
     .link-form { display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1; align-items: center; }
     .link-form input { flex: 1; }
-    .link-form input.short-input { flex: 0 0 120px; }
-    
     .link-list { display: flex; flex-direction: column; gap: 10px; }
     .link-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; transition: background 0.2s; }
-    .link-item:hover { background: #f8fafc; }
     .link-info { display: flex; align-items: center; gap: 16px; }
-    .link-tag { background: #e2e8f0; color: #334155; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; min-width: 60px; text-align: center; }
     .link-title { font-size: 1rem; font-weight: 600; color: var(--primary-color); text-decoration: none; }
     .link-title:hover { text-decoration: underline; }
 
-    /* ================= 新增：AI 聊天視窗樣式 ================= */
-    .ai-chat-container { display: flex; flex-direction: column; gap: 16px; height: 60vh; background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); overflow-y: auto; }
+    /* AI 聊天視窗 */
+    .ai-chat-container { display: flex; flex-direction: column; gap: 16px; height: 50vh; background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); overflow-y: auto; }
     .ai-message { display: flex; flex-direction: column; gap: 6px; max-width: 80%; }
     .ai-message.user { align-self: flex-end; }
     .ai-message.system { align-self: flex-start; }
@@ -112,25 +98,23 @@
     .msg-bubble { padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; }
     .ai-message.user .msg-bubble { background: var(--primary-color); color: #fff; border-bottom-right-radius: 2px; }
     .ai-message.system .msg-bubble { background: #fff; border: 1px solid var(--border-color); color: var(--text-main); border-bottom-left-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    
     .ai-input-area { display: flex; gap: 10px; margin-top: 20px; }
     .ai-input-area textarea { flex: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; resize: none; font-size: 0.95rem; font-family: inherit; outline: none; }
-    .ai-input-area textarea:focus { border-color: var(--primary-color); }
-    .ai-input-area button { padding: 0 24px; font-size: 1rem; }
   </style>
 </head>
 <body>
+
+<div id="loadingOverlay">連線讀取雲端資料中...</div>
 
 <!-- 左側欄位 -->
 <aside class="sidebar">
   <div class="sidebar-header">📐 數學領域系統</div>
   <nav class="sidebar-menu">
-    <a class="menu-item active" onclick="switchTab('tab-duties', this)">歷年工作執掌與統計</a>
-    <a class="menu-item" onclick="switchTab('tab-meetings', this)">歷年會議記錄</a>
+    <a class="menu-item active" onclick="switchTab('tab-duties', this)">歷年工作職位</a>
+    <a class="menu-item" onclick="switchTab('tab-meetings', this)">歷年領域會議</a>
     <a class="menu-item" onclick="switchTab('tab-plans', this)">歷年評鑑計劃</a>
     <a class="menu-item" onclick="switchTab('tab-results', this)">歷年評鑑結果</a>
-    <a class="menu-item" onclick="switchTab('tab-materials', this)">數學領域相關資料</a>
-    <a class="menu-item admin-only" id="menuAiRecords" onclick="switchTab('tab-ai', this)" style="display: none;">🔒 人工智慧會議記錄</a>
+    <a class="menu-item admin-only" id="menuAiRecords" onclick="switchTab('tab-ai', this)">🔒 AI會議助理</a>
   </nav>
 </aside>
 
@@ -138,7 +122,7 @@
 <main class="main-wrapper">
   <div class="container">
     <header>
-      <h1 id="pageTitle">歷年工作執掌分配與次數統計</h1>
+      <h1 id="pageTitle">歷年工作職位分配與統計</h1>
       <div class="admin-bar">
         <span id="adminBadge" class="status-badge status-locked">🔒 唯讀檢視模式</span>
         <div id="loginArea">
@@ -149,14 +133,14 @@
       </div>
     </header>
 
-    <!-- 【分頁1】歷年工作執掌與統計 -->
+    <!-- 【分頁1】歷年工作職位 -->
     <div id="tab-duties" class="tab-content active">
-      <section class="section-card">
+      <section class="section-card admin-only-ele disabled-action">
         <div class="section-header">
           <span class="section-title">👩‍🏫 領域教師名單</span>
-          <div class="admin-only-ele disabled-action" style="display:flex; gap:10px;">
+          <div style="display:flex; gap:10px;">
             <input type="text" id="newTeacherName" placeholder="輸入教師姓名">
-            <button class="btn-primary btn-sm" onclick="addTeacher()">新增教師</button>
+            <button class="btn-primary btn-sm" onclick="dispatchDelta('addTeacher', { id: 't_' + Date.now(), name: document.getElementById('newTeacherName').value.trim(), isCurrent: true })">新增教師</button>
           </div>
         </div>
         <div class="teachers-layout">
@@ -176,24 +160,14 @@
           <span class="section-title">📅 歷年工作職責分配</span>
           <div class="admin-only-ele disabled-action" style="display:flex; gap:10px;">
             <input type="text" id="newSemesterName" placeholder="例如：115學年上">
-            <button class="btn-primary btn-sm" onclick="addSemester()">新增學期</button>
+            <button class="btn-primary btn-sm" onclick="dispatchDelta('addSemester', { id: 's_' + Date.now(), name: document.getElementById('newSemesterName').value.trim(), color: SEMESTER_PALETTE[Math.floor(Math.random()*SEMESTER_PALETTE.length)] })">新增學期</button>
           </div>
         </div>
         <div class="semester-list" id="semesterContainer"></div>
       </section>
-
+      
       <section class="section-card">
-        <div class="section-header" style="flex-direction: column; align-items: flex-start; border-bottom: none; padding-bottom: 0;">
-          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;"><span class="section-title">📊 現任領域教師歷年工作次數統計</span></div>
-          <div class="rules-box">
-            <strong>💡 統計核心精神：只顯示「現任教師」，且「誰實際做事，就算誰的」。</strong>
-            <ul>
-              <li><strong>代理優先：</strong>若原負責人與代理人皆為「現任領域教師」，工作次數歸實際執行的「代理人」。</li>
-              <li><strong>原主承擔：</strong>若代理人已離開領域（非現任），次數算回「原負責人」頭上。</li>
-              <li><strong>暫時隱藏：</strong>若兩人都已離開領域，這筆次數暫不顯示（未來有人回任即會重新出現）。</li>
-            </ul>
-          </div>
-        </div>
+        <div class="section-header"><span class="section-title">📊 現任領域教師歷年工作次數統計</span></div>
         <div class="stats-grid" id="statsContainer"></div>
       </section>
     </div>
@@ -201,12 +175,11 @@
     <!-- 【分頁2】歷年會議記錄 -->
     <div id="tab-meetings" class="tab-content">
       <section class="section-card">
-        <div class="section-header"><span class="section-title">📁 歷年會議記錄 (依年度新至舊排序)</span></div>
+        <div class="section-header"><span class="section-title">📁 歷年會議記錄 (最新加入在最上方)</span></div>
         <div class="link-form admin-only-ele disabled-action">
-          <input type="text" id="m_year" class="short-input" placeholder="學年度 (例:113)">
-          <input type="text" id="m_title" placeholder="會議記錄標題 (例:上學期期初會議)">
+          <input type="text" id="m_title" placeholder="輸入會議記錄名稱 (例：113學年度下學期期末會議)">
           <input type="text" id="m_link" placeholder="雲端硬碟連結 (https://...)">
-          <button class="btn-primary" onclick="addResource('meetings')">新增記錄</button>
+          <button class="btn-primary" onclick="addResource('meetings', 'm')">新增記錄</button>
         </div>
         <div class="link-list" id="list_meetings"></div>
       </section>
@@ -215,12 +188,11 @@
     <!-- 【分頁3】歷年評鑑計劃 -->
     <div id="tab-plans" class="tab-content">
       <section class="section-card">
-        <div class="section-header"><span class="section-title">📋 歷年評鑑計劃 (依年度新至舊排序)</span></div>
+        <div class="section-header"><span class="section-title">📋 歷年評鑑計劃 (最新加入在最上方)</span></div>
         <div class="link-form admin-only-ele disabled-action">
-          <input type="text" id="p_year" class="short-input" placeholder="學年度 (例:113)">
-          <input type="text" id="p_title" placeholder="評鑑計劃標題">
+          <input type="text" id="p_title" placeholder="輸入評鑑計劃名稱 (例：113學年度評鑑計劃)">
           <input type="text" id="p_link" placeholder="雲端硬碟連結 (https://...)">
-          <button class="btn-primary" onclick="addResource('plans')">新增計劃</button>
+          <button class="btn-primary" onclick="addResource('plans', 'p')">新增計劃</button>
         </div>
         <div class="link-list" id="list_plans"></div>
       </section>
@@ -229,49 +201,25 @@
     <!-- 【分頁4】歷年評鑑結果 -->
     <div id="tab-results" class="tab-content">
       <section class="section-card">
-        <div class="section-header"><span class="section-title">🏆 歷年評鑑結果 (依年度新至舊排序)</span></div>
+        <div class="section-header"><span class="section-title">🏆 歷年評鑑結果 (最新加入在最上方)</span></div>
         <div class="link-form admin-only-ele disabled-action">
-          <input type="text" id="r_year" class="short-input" placeholder="學年度 (例:113)">
-          <input type="text" id="r_title" placeholder="評鑑結果標題">
+          <input type="text" id="r_title" placeholder="輸入評鑑結果名稱 (例：113學年度評鑑結果)">
           <input type="text" id="r_link" placeholder="雲端硬碟連結 (https://...)">
-          <button class="btn-primary" onclick="addResource('results')">新增結果</button>
+          <button class="btn-primary" onclick="addResource('results', 'r')">新增結果</button>
         </div>
         <div class="link-list" id="list_results"></div>
       </section>
     </div>
 
-    <!-- 【分頁5】數學領域相關資料 -->
-    <div id="tab-materials" class="tab-content">
-      <section class="section-card">
-        <div class="section-header"><span class="section-title">📚 數學領域相關資料 (依標號小至大排序)</span></div>
-        <div class="link-form admin-only-ele disabled-action">
-          <input type="number" id="mat_order" class="short-input" placeholder="標號 (例:1)">
-          <input type="text" id="mat_title" placeholder="資料標題 (例:素養導向教學手冊)">
-          <input type="text" id="mat_link" placeholder="雲端硬碟連結 (https://...)">
-          <button class="btn-primary" onclick="addResource('materials')">新增資料</button>
-        </div>
-        <div class="link-list" id="list_materials"></div>
-      </section>
-    </div>
-
-    <!-- 【分頁6】人工智慧會議記錄 -->
+    <!-- 【分頁5】AI 會議助理 -->
     <div id="tab-ai" class="tab-content">
       <section class="section-card" style="border: 2px solid #ef4444;">
         <div class="section-header">
-          <span class="section-title" style="color:#ef4444;">🤖 人工智慧會議記錄 (管理者專區)</span>
-          <span style="font-size:0.85rem; color:var(--text-muted);">將數學領域議題交由 AI 分析並產生紀錄留存</span>
+          <span class="section-title" style="color:#ef4444;">🤖 AI 會議助理 (管理者專區)</span>
         </div>
-        
-        <div class="ai-chat-container" id="aiChatBox">
-          <div class="ai-message system">
-            <span class="msg-sender">AI 助手</span>
-            <div class="msg-bubble">您好！我是數學領域 AI 助手。請在下方輸入您想討論的領域議題或會議摘要，我會協助您分析、統整並產出結構化的建議紀錄。</div>
-          </div>
-          <!-- 訊息由 JS 動態產生 -->
-        </div>
-
+        <div class="ai-chat-container" id="aiChatBox"></div>
         <div class="ai-input-area">
-          <textarea id="aiInput" rows="2" placeholder="輸入數學領域議題... 例如：「關於下學期導入平板輔助數學教學的優缺點討論」"></textarea>
+          <textarea id="aiInput" rows="2" placeholder="輸入數學領域議題..."></textarea>
           <button class="btn-primary" onclick="sendToAI()">發送給 AI 💬</button>
         </div>
       </section>
@@ -281,222 +229,72 @@
 </main>
 
 <script>
-  // 分頁切換
-  function switchTab(tabId, element) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    element.classList.add('active');
-    document.getElementById('pageTitle').textContent = element.textContent.replace('🔒', '').trim();
-  }
-
-  // 資料狀態
   const SEMESTER_PALETTE = ['#eff6ff', '#fdf2f8', '#f0fdf4', '#fefce8', '#faf5ff', '#fff7ed', '#f0fdfa', '#f5f3ff'];
-  let state = {
-    isAdmin: false,
-    teachers: [
-      { id: "t1", name: "王老師", isCurrent: true },
-      { id: "t2", name: "李老師", isCurrent: true }
-    ],
-    semesters: [
-      { id: "s114-1", name: "114學年上", color: "#eff6ff" }
-    ],
-    duties: { 's114-1_召集人': { primary: 't1', substitute: '' } },
-    
-    // 新增：連結資源庫
-    resources: {
-      meetings: [
-        { id: 'rm1', tag: '113', title: '113學年下學期期末領域會議', link: '#' },
-        { id: 'rm2', tag: '112', title: '112學年領域教學研討會', link: '#' }
-      ],
-      plans: [],
-      results: [],
-      materials: [
-        { id: 'mat1', tag: '1', title: '數學素養導向教學參考手冊', link: '#' },
-        { id: 'mat2', tag: '2', title: '七年級段考命題規範', link: '#' }
-      ]
-    },
-    
-    // 新增：AI 紀錄
-    aiLogs: []
+  const ROLES = ["召集人", "參加研習", "會議記錄"];
+  
+  let state = { isAdmin: false, adminPwd: '', data: { teachers: [], semesters: [], duties: {}, resources: { meetings: [], plans: [], results: [] }, aiLogs: [] } };
+
+  // ================= 頁面初始化與 GAS 連線 =================
+  window.onload = () => {
+    google.script.run.withSuccessHandler(serverData => {
+      state.data = serverData;
+      document.getElementById('loadingOverlay').style.display = 'none';
+      renderAll();
+    }).withFailureHandler(err => {
+      alert("讀取資料失敗：" + err.message);
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }).getInitialData();
   };
 
-  const ROLES = ["召集人", "參加研習", "會議記錄"];
+  // ================= 核心：派發 Delta 單筆操作指令 =================
+  function dispatchDelta(action, payload) {
+    if(!state.isAdmin) return alert("請先解鎖編輯模式");
+    if(payload && payload.name === "") return alert("名稱不可為空");
 
-  window.onload = () => renderAll();
+    document.getElementById('loadingOverlay').innerText = "資料寫入雲端中...";
+    document.getElementById('loadingOverlay').style.display = 'flex';
 
+    // 透過 GAS LockService 安全傳輸單筆資料[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)
+    google.script.run.withSuccessHandler(res => {
+      if(res.success) {
+        state.data = res.updatedData; // 更新本地狀態為最新的雲端狀態
+        clearInputs();
+        renderAll();
+      } else {
+        alert("錯誤：" + res.error);
+      }
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }).withFailureHandler(err => {
+      alert("通訊失敗：" + err.message);
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }).processDelta(action, payload, state.adminPwd);
+  }
+
+  function clearInputs() {
+    ['newTeacherName', 'newSemesterName', 'm_title', 'm_link', 'p_title', 'p_link', 'r_title', 'r_link', 'aiInput'].forEach(id => {
+      if(document.getElementById(id)) document.getElementById(id).value = '';
+    });
+  }
+
+  // ================= 渲染邏輯 =================
   function renderAll() {
     renderTeacherManagement();
     renderSemesters();
     calculateAndRenderStats();
     renderResources();
     renderAiLogs();
-    updateAdminUI();
   }
 
-  function handleLogin() {
-    const pwd = document.getElementById('adminPwdInput').value;
-    if (pwd === "admin_password_123" || pwd === "1234") {
-      state.isAdmin = true;
-      document.getElementById('adminPwdInput').value = '';
-      renderAll();
-    } else alert("密碼錯誤！");
-  }
-
-  function handleLogout() {
-    state.isAdmin = false;
-    const aiTab = document.getElementById('tab-ai');
-    if(aiTab.classList.contains('active')) switchTab('tab-duties', document.querySelector('.menu-item')); 
-    renderAll();
-  }
-
-  function updateAdminUI() {
-    const badge = document.getElementById('adminBadge');
-    const loginArea = document.getElementById('loginArea');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const menuAiRecords = document.getElementById('menuAiRecords');
-    const adminEles = document.querySelectorAll('.admin-only-ele');
-
-    if (state.isAdmin) {
-      badge.textContent = "🔓 管理者編輯模式";
-      badge.className = "status-badge status-unlocked";
-      loginArea.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      menuAiRecords.style.display = "flex";
-      adminEles.forEach(el => el.classList.remove('disabled-action'));
-    } else {
-      badge.textContent = "🔒 唯讀檢視模式";
-      badge.className = "status-badge status-locked";
-      loginArea.style.display = "flex";
-      logoutBtn.style.display = "none";
-      menuAiRecords.style.display = "none";
-      adminEles.forEach(el => el.classList.add('disabled-action'));
-    }
-    renderTeacherManagement(); // 更新按鈕顯示狀態
-    renderSemesters();
-    renderResources();
-  }
-
-  /* --- 資源連結功能 --- */
-  function renderResources() {
-    const configs = [
-      { key: 'meetings', prefix: '學年度' },
-      { key: 'plans', prefix: '學年度' },
-      { key: 'results', prefix: '學年度' },
-      { key: 'materials', prefix: '標號' }
-    ];
-
-    configs.forEach(cfg => {
-      const container = document.getElementById(`list_${cfg.key}`);
-      container.innerHTML = '';
-      let list = [...state.resources[cfg.key]];
-
-      // 排序：標號(materials)由小到大，其他(年度)由大到小(新至舊)
-      if (cfg.key === 'materials') {
-        list.sort((a, b) => Number(a.tag) - Number(b.tag));
-      } else {
-        list.sort((a, b) => Number(b.tag) - Number(a.tag));
-      }
-
-      if (list.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 20px; color:var(--text-muted);">尚無資料</div>`;
-        return;
-      }
-
-      list.forEach(item => {
-        const delBtn = state.isAdmin ? `<button class="btn-outline btn-sm" style="color:#ef4444;" onclick="deleteResource('${cfg.key}', '${item.id}')">刪除</button>` : '';
-        container.innerHTML += `
-          <div class="link-item">
-            <div class="link-info">
-              <span class="link-tag">${cfg.prefix} ${item.tag}</span>
-              <a href="${item.link}" target="_blank" class="link-title">${item.title}</a>
-            </div>
-            ${delBtn}
-          </div>
-        `;
-      });
-    });
-  }
-
-  function addResource(key) {
-    const prefix = key === 'meetings' ? 'm' : key === 'plans' ? 'p' : key === 'results' ? 'r' : 'mat';
-    const tagInput = document.getElementById(`${prefix}_year`) || document.getElementById(`${prefix}_order`);
-    const titleInput = document.getElementById(`${prefix}_title`);
-    const linkInput = document.getElementById(`${prefix}_link`);
-    
-    const tag = tagInput.value.trim();
-    const title = titleInput.value.trim();
-    let link = linkInput.value.trim();
-
-    if (!tag || !title || !link) return alert("請填寫完整資訊");
-    if (!link.startsWith('http')) link = 'https://' + link;
-
-    state.resources[key].push({ id: 'res_' + Date.now(), tag, title, link });
-    
-    tagInput.value = ''; titleInput.value = ''; linkInput.value = '';
-    renderResources();
-  }
-
-  function deleteResource(key, id) {
-    if(!confirm("確定要刪除此連結嗎？")) return;
-    state.resources[key] = state.resources[key].filter(r => r.id !== id);
-    renderResources();
-  }
-
-  /* --- AI 聊天功能 --- */
-  function sendToAI() {
-    const input = document.getElementById('aiInput');
-    const text = input.value.trim();
-    if (!text) return;
-
-    // 加入使用者訊息
-    state.aiLogs.push({ role: 'user', text: text });
-    input.value = '';
-    renderAiLogs();
-
-    // 模擬 AI 思考與回應延遲
-    setTimeout(() => {
-      const mockResponse = `【AI 會議紀錄草案】\n針對您提出的議題：「${text}」，以下是初步統整分析：\n\n1. 核心重點：...\n2. 執行建議：...\n3. 需決議事項：...\n\n(註：此為系統模擬回應。未來可在此串接真實的 AI API 來產生正式報告。)`;
-      state.aiLogs.push({ role: 'system', text: mockResponse });
-      renderAiLogs();
-    }, 1000);
-  }
-
-  function renderAiLogs() {
-    const box = document.getElementById('aiChatBox');
-    // 保留最上面的初始打招呼訊息
-    const initialGreeting = `
-      <div class="ai-message system">
-        <span class="msg-sender">AI 助手</span>
-        <div class="msg-bubble">您好！我是數學領域 AI 助手。請在下方輸入您想討論的領域議題或會議摘要，我會協助您分析、統整並產出結構化的建議紀錄。</div>
-      </div>
-    `;
-    
-    let html = initialGreeting;
-    state.aiLogs.forEach(log => {
-      const isUser = log.role === 'user';
-      html += `
-        <div class="ai-message ${isUser ? 'user' : 'system'}">
-          <span class="msg-sender">${isUser ? '管理者' : 'AI 助手'}</span>
-          <div class="msg-bubble" style="white-space: pre-wrap;">${log.text}</div>
-        </div>
-      `;
-    });
-    box.innerHTML = html;
-    box.scrollTop = box.scrollHeight; // 捲動到最底部
-  }
-
-  /* --- 原有功能 (教師/學期/統計) --- */
   function renderTeacherManagement() {
     const currentList = document.getElementById('currentTeachersList');
     const formerList = document.getElementById('formerTeachersList');
     currentList.innerHTML = ''; formerList.innerHTML = '';
     let currentCount = 0, formerCount = 0;
 
-    state.teachers.forEach(teacher => {
+    state.data.teachers.forEach(teacher => {
       const chip = document.createElement('div');
       chip.className = 'teacher-chip';
-      const btn = state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')">轉${teacher.isCurrent?'非':''}現任 ⇄</button>` : '';
+      const btn = state.isAdmin ? `<button class="btn-outline btn-sm" onclick="dispatchDelta('toggleTeacher', { id: '${teacher.id}' })">轉${teacher.isCurrent?'非':''}現任 ⇄</button>` : '';
       chip.innerHTML = `<span>${teacher.name}</span> ${btn}`;
       if (teacher.isCurrent) { currentCount++; currentList.appendChild(chip); } 
       else { formerCount++; formerList.appendChild(chip); }
@@ -505,110 +303,65 @@
     document.getElementById('formerCount').textContent = `${formerCount} 位`;
   }
 
-  function addTeacher() {
-    const name = document.getElementById('newTeacherName').value.trim();
-    if (!name) return alert("請輸入教師姓名");
-    state.teachers.push({ id: 't_' + Date.now(), name: name, isCurrent: true });
-    document.getElementById('newTeacherName').value = '';
-    renderAll();
-  }
-
-  function toggleTeacherRole(id) {
-    const teacher = state.teachers.find(t => t.id === id);
-    if (teacher) { teacher.isCurrent = !teacher.isCurrent; renderAll(); }
-  }
-
   function renderSemesters() {
     const container = document.getElementById('semesterContainer');
     container.innerHTML = '';
-    state.semesters.forEach(sem => {
+    state.data.semesters.forEach(sem => {
       const row = document.createElement('div');
       row.className = 'semester-row';
-      row.style.backgroundColor = sem.color;
+      row.style.backgroundColor = sem.color || '#eff6ff';
       let dutyColsHTML = '';
       ROLES.forEach(role => {
         const key = `${sem.id}_${role}`;
-        const currentDuty = state.duties[key] || { primary: '', substitute: '' };
+        const currentDuty = state.data.duties[key] || { primary: '', substitute: '' };
         dutyColsHTML += `
           <div class="duty-cell">
             <span class="duty-label">${role}</span>
-            <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutyPrimary('${key}', this.value)">
+            <select ${!state.isAdmin ? 'disabled' : ''} onchange="dispatchDelta('updateDuty', { key: '${key}', roleType: 'primary', teacherId: this.value })">
               <option value="">-- 請選擇 --</option>
-              ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.primary ? 'selected' : ''}>${t.name} ${!t.isCurrent ? '(非)' : ''}</option>`).join('')}
+              ${state.data.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.primary ? 'selected' : ''}>${t.name} ${!t.isCurrent ? '(非)' : ''}</option>`).join('')}
             </select>
             <div class="sub-select-wrap">
               <span>由</span>
-              <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutySubstitute('${key}', this.value)">
+              <select ${!state.isAdmin ? 'disabled' : ''} onchange="dispatchDelta('updateDuty', { key: '${key}', roleType: 'substitute', teacherId: this.value })">
                 <option value="">無</option>
-                ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.substitute ? 'selected' : ''}>${t.name}</option>`).join('')}
+                ${state.data.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.substitute ? 'selected' : ''}>${t.name}</option>`).join('')}
               </select>
               <span>代理</span>
             </div>
           </div>`;
       });
-      const delBtnHTML = state.isAdmin ? `<button class="btn-danger btn-sm" onclick="removeSemester('${sem.id}')">✕</button>` : `<div></div>`;
+      const delBtnHTML = state.isAdmin ? `<button class="btn-danger btn-sm" onclick="dispatchDelta('removeSemester', { id: '${sem.id}' })">✕</button>` : `<div></div>`;
       row.innerHTML = `<div class="semester-name">${sem.name}</div>${dutyColsHTML}${delBtnHTML}`;
       container.appendChild(row);
     });
   }
 
-  function addSemester() {
-    const input = document.getElementById('newSemesterName');
-    const name = input.value.trim();
-    if (!name) return alert("請輸入學期名稱");
-    state.semesters.unshift({ id: 's_' + Date.now(), name: name, color: SEMESTER_PALETTE[state.semesters.length % SEMESTER_PALETTE.length] });
-    input.value = '';
-    renderAll();
-  }
-
-  function removeSemester(semId) {
-    if (!confirm("確定要移除此學期紀錄嗎？")) return;
-    state.semesters = state.semesters.filter(s => s.id !== semId);
-    renderAll();
-  }
-
-  function updateDutyPrimary(key, val) {
-    if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
-    state.duties[key].primary = val; calculateAndRenderStats();
-  }
-
-  function updateDutySubstitute(key, val) {
-    if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
-    state.duties[key].substitute = val; calculateAndRenderStats();
-  }
-
   function calculateAndRenderStats() {
     const teacherMap = {};
-    state.teachers.forEach(t => { teacherMap[t.id] = t; });
+    state.data.teachers.forEach(t => { teacherMap[t.id] = t; });
     const stats = {};
-    state.teachers.filter(t => t.isCurrent).forEach(t => { stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 }; });
+    state.data.teachers.filter(t => t.isCurrent).forEach(t => { stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 }; });
 
-    state.semesters.forEach(sem => {
+    state.data.semesters.forEach(sem => {
       ROLES.forEach(role => {
         const key = `${sem.id}_${role}`;
-        const duty = state.duties[key];
+        const duty = state.data.duties[key];
         if (!duty || !duty.primary) return;
         const primaryTeacher = teacherMap[duty.primary];
         const subTeacher = duty.substitute ? teacherMap[duty.substitute] : null;
         let creditId = null;
 
-        if (!subTeacher) {
-          if (primaryTeacher && primaryTeacher.isCurrent) creditId = primaryTeacher.id;
-        } else {
-          if (subTeacher.isCurrent) creditId = subTeacher.id; 
-          else if (primaryTeacher && primaryTeacher.isCurrent) creditId = primaryTeacher.id;
-        }
+        if (!subTeacher) { if (primaryTeacher && primaryTeacher.isCurrent) creditId = primaryTeacher.id; } 
+        else { if (subTeacher.isCurrent) creditId = subTeacher.id; else if (primaryTeacher && primaryTeacher.isCurrent) creditId = primaryTeacher.id; }
+        
         if (creditId && stats[creditId]) { stats[creditId][role]++; stats[creditId].total++; }
       });
     });
 
     const container = document.getElementById('statsContainer');
     container.innerHTML = '';
-    const currentList = state.teachers.filter(t => t.isCurrent);
-    if (currentList.length === 0) { container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:30px;">無資料</div>`; return; }
-    
-    currentList.forEach(t => {
-      const data = stats[t.id];
+    Object.values(stats).forEach(data => {
       container.innerHTML += `
         <div class="stat-card">
           <div class="stat-card-header">🧑‍🏫 ${data.name}</div>
@@ -619,7 +372,103 @@
         </div>`;
     });
   }
-</script>
 
+  function addResource(key, prefix) {
+    const title = document.getElementById(`${prefix}_title`).value.trim();
+    let link = document.getElementById(`${prefix}_link`).value.trim();
+    if (!title || !link) return alert("請填寫名稱與連結");
+    if (!link.startsWith('http')) link = 'https://' + link;
+    
+    // 名稱只要一格填入即可
+    dispatchDelta('addResource', { category: key, resource: { id: 'res_' + Date.now(), title, link } });
+  }
+
+  function renderResources() {
+    ['meetings', 'plans', 'results'].forEach(key => {
+      const container = document.getElementById(`list_${key}`);
+      container.innerHTML = '';
+      if (!state.data.resources[key] || state.data.resources[key].length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 20px; color:var(--text-muted);">尚無資料</div>`;
+        return;
+      }
+      state.data.resources[key].forEach(item => {
+        const delBtn = state.isAdmin ? `<button class="btn-outline btn-sm" style="color:#ef4444;" onclick="dispatchDelta('deleteResource', { category: '${key}', id: '${item.id}' })">刪除</button>` : '';
+        container.innerHTML += `
+          <div class="link-item">
+            <div class="link-info"><a href="${item.link}" target="_blank" class="link-title">${item.title}</a></div>
+            ${delBtn}
+          </div>`;
+      });
+    });
+  }
+
+  // ================= 權限與 UI 切換 =================
+  function handleLogin() {
+    const pwd = document.getElementById('adminPwdInput').value;
+    google.script.run.withSuccessHandler(isValid => {
+      if (isValid) {
+        state.isAdmin = true; state.adminPwd = pwd;
+        updateAdminUI(); document.getElementById('adminPwdInput').value = '';
+      } else alert("密碼錯誤！");
+    }).verifyAdmin(pwd);
+  }
+
+  function handleLogout() {
+    state.isAdmin = false; state.adminPwd = '';
+    const aiTab = document.getElementById('tab-ai');
+    if(aiTab.classList.contains('active')) switchTab('tab-duties', document.querySelector('.menu-item')); 
+    updateAdminUI();
+  }
+
+  function updateAdminUI() {
+    const badge = document.getElementById('adminBadge');
+    document.getElementById('loginArea').style.display = state.isAdmin ? "none" : "flex";
+    document.getElementById('logoutBtn').style.display = state.isAdmin ? "inline-block" : "none";
+    document.getElementById('menuAiRecords').style.display = state.isAdmin ? "flex" : "none";
+    
+    badge.textContent = state.isAdmin ? "🔓 管理者編輯模式" : "🔒 唯讀檢視模式";
+    badge.className = state.isAdmin ? "status-badge status-unlocked" : "status-badge status-locked";
+    
+    document.querySelectorAll('.admin-only-ele').forEach(el => {
+      state.isAdmin ? el.classList.remove('disabled-action') : el.classList.add('disabled-action');
+    });
+    renderAll();
+  }
+
+  function switchTab(tabId, element) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+    document.getElementById('pageTitle').textContent = element.textContent.replace('🔒', '').trim();
+  }
+
+  // ================= AI 聊天功能 =================
+  function sendToAI() {
+    const text = document.getElementById('aiInput').value.trim();
+    if (!text) return;
+    dispatchDelta('addAiLog', { role: 'user', text: text });
+    
+    setTimeout(() => {
+      dispatchDelta('addAiLog', { role: 'system', text: `【系統自動回覆】\n已記錄您提出的議題：「${text}」。\n(註：此處可後續串接真實的 OpenAI/Gemini API 來產生摘要)` });
+    }, 1500);
+  }
+
+  function renderAiLogs() {
+    const box = document.getElementById('aiChatBox');
+    let html = `<div class="ai-message system"><span class="msg-sender">AI 助手</span><div class="msg-bubble">您好！我是數學領域 AI 助手，請輸入您想討論的議題。</div></div>`;
+    
+    (state.data.aiLogs || []).forEach(log => {
+      const isUser = log.role === 'user';
+      html += `
+        <div class="ai-message ${isUser ? 'user' : 'system'}">
+          <span class="msg-sender">${isUser ? '管理者' : 'AI 助手'}</span>
+          <div class="msg-bubble" style="white-space: pre-wrap;">${log.text}</div>
+        </div>`;
+    });
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  }
+</script>
 </body>
 </html>
