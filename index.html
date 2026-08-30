@@ -1,1151 +1,252 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
+  <meta charset="UTF-8">
+  <title>數學領域 - 歷年工作執掌系統</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; padding: 20px; color: #333; }
+    .container { max-width: 1000px; margin: auto; }
+    h1, h2 { color: #2c3e50; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+    
+    /* 區塊 1 & 3：教師名單與統計表 (表格設計) */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+    th { background-color: #f1f3f5; }
 
-<meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
-
-<title>數學領域工作管理系統</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
->
-
-<style>
-
-[v-cloak] {
-  display: none;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.prose h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-  color: #1f2937;
-}
-
-.prose p {
-  margin-bottom: 0.75rem;
-  line-height: 1.5;
-  color: #4b5563;
-}
-
-.prose ul {
-  list-style-type: disc;
-  padding-left: 1.25rem;
-  margin-bottom: 1rem;
-  color: #4b5563;
-}
-
-.prose li {
-  margin-bottom: 0.25rem;
-}
-
-.prose strong {
-  font-weight: 600;
-  color: #111827;
-}
-
-</style>
-
+    /* 區塊 2：歷年工作執掌 (每學期一列的卡片設計) */
+    .semester-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+      border-left: 6px solid #aaa; /* 預設顏色，會被 JS 覆蓋 */
+    }
+    .semester-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      width: 120px;
+      padding: 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.4);
+    }
+    .duties-container {
+      display: flex;
+      flex: 1;
+      justify-content: space-around;
+      padding: 15px;
+      background: rgba(255,255,255,0.8);
+    }
+    .duty-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 25%;
+    }
+    .duty-title { font-weight: bold; color: #444; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 5px;}
+    .select-group { display: flex; flex-direction: column; font-size: 0.9em; }
+    select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+    .substitute-label { color: #d35400; font-size: 0.85em; margin-top: 4px; }
+  </style>
 </head>
+<body>
 
+<div class="container">
+  <h1>數學領域 - 歷年工作執掌與統計</h1>
 
-<body class="bg-gray-100 text-gray-800 font-sans antialiased">
-
-<div
-  id="app"
-  v-cloak
-  class="flex h-screen overflow-hidden relative"
->
-
-
-<!-- ===============================
-     管理員登入
-================================ -->
-
-<div
-  v-if="showLoginModal"
-  class="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
->
-
-  <div class="bg-white p-6 rounded-lg shadow-xl w-80">
-
-    <h3 class="text-lg font-bold mb-4 text-gray-800">
-
-      <i class="fa-solid fa-lock mr-2 text-slate-500"></i>
-
-      管理員登入
-
-    </h3>
-
-    <input
-      v-model="inputPassword"
-      @keyup.enter="login"
-      type="password"
-      placeholder="請輸入管理員密碼..."
-      class="w-full border-gray-300 rounded-md p-2 mb-4 border focus:ring-blue-500 focus:border-blue-500"
-    >
-
-    <div class="flex justify-end gap-2">
-
-      <button
-        @click="showLoginModal = false"
-        class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded"
-      >
-        取消
-      </button>
-
-      <button
-        @click="login"
-        class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        登入
-      </button>
-
-    </div>
-
+  <!-- 區塊 2：歷年工作執掌分配 -->
+  <h2>📅 歷年工作執掌</h2>
+  <div id="semestersContainer">
+    <!-- JS 將會在這裡動態產生「每學期一列」的卡片 -->
   </div>
+
+  <!-- 區塊 3：歷年工作次數統計 -->
+  <h2>📊 歷年工作次數統計 (僅計算現任教師)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>教師姓名</th>
+        <th>召集人</th>
+        <th>參加研習</th>
+        <th>會議記錄</th>
+        <th>總計</th>
+      </tr>
+    </thead>
+    <tbody id="statisticsBody">
+      <!-- JS 動態產生統計結果 -->
+    </tbody>
+  </table>
 
 </div>
 
-
-<!-- ===============================
-     側邊欄
-================================ -->
-
-<aside
-  class="w-64 bg-slate-800 text-white flex flex-col h-full shadow-xl z-10"
->
-
-  <div class="p-5 flex items-center justify-between border-b border-slate-700">
-
-    <h1 class="text-xl font-bold tracking-wider">
-
-      <i class="fa-solid fa-square-root-variable mr-2"></i>
-
-      數學領域會議
-
-    </h1>
-
-  </div>
-
-
-  <nav class="flex-1 overflow-y-auto py-4">
-
-    <ul class="space-y-1">
-
-      <li>
-
-        <a
-          href="#"
-          @click.prevent="currentView='history'"
-          :class="{'bg-blue-600':currentView==='history'}"
-          class="block px-6 py-3 hover:bg-slate-700"
-        >
-
-          <i class="fa-solid fa-users-gear w-6"></i>
-
-          歷屆工作職位
-
-        </a>
-
-      </li>
-
-
-      <li>
-
-        <a
-          href="#"
-          @click.prevent="currentView='meetings'"
-          :class="{'bg-blue-600':currentView==='meetings'}"
-          class="block px-6 py-3 hover:bg-slate-700"
-        >
-
-          <i class="fa-regular fa-folder-open w-6"></i>
-
-          歷年會議紀錄
-
-        </a>
-
-      </li>
-
-
-      <li>
-
-        <a
-          href="#"
-          @click.prevent="currentView='evaluations'"
-          :class="{'bg-blue-600':currentView==='evaluations'}"
-          class="block px-6 py-3 hover:bg-slate-700"
-        >
-
-          <i class="fa-solid fa-file-signature w-6"></i>
-
-          評鑑計畫表
-
-        </a>
-
-      </li>
-
-
-      <li>
-
-        <a
-          href="#"
-          @click.prevent="currentView='eval_results'"
-          :class="{'bg-blue-600':currentView==='eval_results'}"
-          class="block px-6 py-3 hover:bg-slate-700"
-        >
-
-          <i class="fa-solid fa-file-circle-check w-6"></i>
-
-          評鑑審查結果
-
-        </a>
-
-      </li>
-
-
-      <li
-        v-if="isAdmin"
-        class="mt-4 border-t border-slate-700 pt-2"
-      >
-
-        <a
-          href="#"
-          @click.prevent="currentView='ai_assistant'"
-          :class="{'bg-purple-600':currentView==='ai_assistant'}"
-          class="block px-6 py-3 hover:bg-slate-700 text-purple-200"
-        >
-
-          <i class="fa-solid fa-wand-magic-sparkles w-6"></i>
-
-          AI 議案助手
-
-        </a>
-
-      </li>
-
-    </ul>
-
-  </nav>
-
-
-  <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
-
-    <div class="flex items-center justify-between mb-2">
-
-      <div class="flex items-center">
-
-        <span
-          class="w-2 h-2 rounded-full mr-2"
-          :class="
-            syncStatus==='synced'
-            ? 'bg-green-500'
-            : syncStatus==='error'
-            ? 'bg-red-500'
-            : 'bg-yellow-500'
-          "
-        ></span>
-
-        狀態：{{ syncStatusText }}
-
-      </div>
-
-
-      <button
-        v-if="!isAdmin"
-        @click="showLoginModal=true"
-        class="text-slate-500 hover:text-white"
-        title="管理員登入"
-      >
-
-        <i class="fa-solid fa-lock"></i>
-
-      </button>
-
-
-      <button
-        v-else
-        @click="logout"
-        class="text-green-400 hover:text-white"
-      >
-
-        <i class="fa-solid fa-unlock"></i>
-
-        管理員模式
-
-      </button>
-
-    </div>
-
-    <div>
-
-      上次同步：{{ lastSyncTime }}
-
-    </div>
-
-  </div>
-
-</aside>
-
-
-<!-- ===============================
-     主內容
-================================ -->
-
-<main
-  class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50"
->
-
-<header
-  class="bg-white shadow-sm h-16 flex items-center justify-between px-8"
->
-
-  <h2 class="text-xl font-semibold text-gray-700">
-
-    {{ viewTitle }}
-
-  </h2>
-
-
-  <button
-    v-if="isAdmin"
-    @click="forceSync"
-    :disabled="syncStatus==='syncing'"
-    class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 disabled:opacity-50"
-  >
-
-    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>
-
-    {{ syncStatus==='syncing' ? '同步中...' : '強制同步雲端' }}
-
-  </button>
-
-</header>
-
-
-<div class="flex-1 overflow-auto p-8">
-
-<transition
-  name="fade"
-  mode="out-in"
->
-
-
-<!-- ==================================
-     歷屆工作職位
-================================== -->
-
-<div
-  v-if="currentView==='history'"
-  key="history"
-  class="space-y-6"
->
-
-
-<div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
-
-  <div class="flex items-center justify-between mb-4 border-b pb-2">
-
-    <h3 class="text-lg font-medium">
-
-      <i class="fa-solid fa-user-tag mr-2 text-blue-500"></i>
-
-      領域成員名單
-
-    </h3>
-
-
-    <button
-      @click="showArchived=!showArchived"
-      class="text-sm text-gray-500"
-    >
-
-      <i
-        class="fa-solid"
-        :class="showArchived?'fa-eye-slash':'fa-eye'"
-      ></i>
-
-      {{showArchived?'隱藏封存區':'顯示封存區'}}
-
-    </button>
-
-  </div>
-
-
-  <div class="mb-4">
-
-    <div class="text-sm font-semibold text-gray-600 mb-2">
-
-      現任領域成員
-
-    </div>
-
-
-    <div class="flex flex-wrap gap-2">
-
-      <span
-        v-for="name in activeTeachers"
-        :key="name"
-        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200"
-      >
-
-        <template v-if="editingOldName!==name">
-
-          {{name}}
-
-          <template v-if="isAdmin">
-
-            <button
-              @click="startEdit(name)"
-              class="ml-2 text-blue-500"
-            >
-
-              <i class="fa-solid fa-pen text-xs"></i>
-
-            </button>
-
-
-            <button
-              @click="archiveTeacher(name)"
-              class="ml-2 text-blue-500"
-            >
-
-              <i class="fa-solid fa-box-archive text-xs"></i>
-
-            </button>
-
-          </template>
-
-        </template>
-
-
-        <template v-else>
-
-          <input
-            v-model="editingNewName"
-            @keyup.enter="saveEdit"
-            class="w-20 px-1 py-0.5 text-xs text-gray-800 border rounded"
-          >
-
-          <button
-            @click="saveEdit"
-            class="ml-1 text-green-600"
-          >
-            ✓
-          </button>
-
-          <button
-            @click="cancelEdit"
-            class="ml-1 text-red-500"
-          >
-            ×
-          </button>
-
-        </template>
-
-      </span>
-
-    </div>
-
-  </div>
-
-
-  <div
-    v-show="showArchived"
-    class="mb-4 p-3 bg-gray-50 border rounded-md"
-  >
-
-    <div class="text-sm font-semibold text-gray-500 mb-2">
-
-      已封存成員
-
-    </div>
-
-
-    <div class="flex flex-wrap gap-2">
-
-      <span
-        v-for="name in archivedTeachers"
-        :key="'archived-'+name"
-        class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-200 text-gray-600"
-      >
-
-        {{name}}
-
-        <template v-if="isAdmin">
-
-          <button
-            @click="restoreTeacher(name)"
-            class="ml-2 text-green-600"
-          >
-
-            <i class="fa-solid fa-rotate-left text-xs"></i>
-
-          </button>
-
-        </template>
-
-      </span>
-
-    </div>
-
-  </div>
-
-
-  <div
-    v-if="isAdmin"
-    class="flex gap-2"
-  >
-
-    <input
-      v-model="newTeacherName"
-      @keyup.enter="addTeacher"
-      type="text"
-      placeholder="輸入成員姓名"
-      class="flex-1 max-w-xs border rounded-md p-2 text-sm"
-    >
-
-
-    <button
-      @click="addTeacher"
-      class="px-4 py-2 bg-blue-600 text-white rounded-md"
-    >
-
-      <i class="fa-solid fa-plus mr-1"></i>
-
-      新增成員
-
-    </button>
-
-  </div>
-
-</div>
-
-
-<!-- 工作歷史 -->
-
-<div class="bg-white rounded-lg shadow overflow-hidden">
-
-  <div class="flex justify-between items-center p-6 border-b bg-gray-50">
-
-    <h3 class="text-lg font-medium">
-
-      <i class="fa-solid fa-table-list mr-2 text-gray-500"></i>
-
-      工作分配表
-
-    </h3>
-
-
-    <button
-      v-if="isAdmin"
-      @click="addHistoryRow"
-      class="px-3 py-1.5 bg-green-600 text-white rounded text-sm"
-    >
-
-      <i class="fa-solid fa-plus mr-1"></i>
-
-      新增學期
-
-    </button>
-
-  </div>
-
-
-  <div class="overflow-x-auto">
-
-    <table class="min-w-full">
-
-      <thead class="bg-slate-100">
-
+<script>
+  // ==========================================
+  // 1. 模擬的 JSON 資料庫 (包含教師狀態、學期顏色、職務紀錄)
+  // ==========================================
+  let data = {
+    teachers: [
+      { id: "t1", name: "王老師", isCurrent: true },
+      { id: "t2", name: "李老師", isCurrent: true },
+      { id: "t3", name: "林老師", isCurrent: false }, // 非現任
+      { id: "t4", name: "陳老師", isCurrent: true }
+    ],
+    semesters: [
+      { id: "s114-2", name: "114學下", color: "#e3f2fd" }, // 淺藍
+      { id: "s114-1", name: "114學上", color: "#f3e5f5" }, // 淺紫
+      { id: "s113-2", name: "113學下", color: "#e8f5e9" }  // 淺綠
+    ],
+    duties: {
+      "s114-2": {
+        "召集人": { primary: "t1", sub: "" },
+        "參加研習": { primary: "t2", sub: "t4" }, // 李老師負責，陳老師代理
+        "會議記錄": { primary: "t4", sub: "" }
+      },
+      "s114-1": {
+        "召集人": { primary: "t1", sub: "" },
+        "參加研習": { primary: "t3", sub: "t1" }, // 林老師(非現任)負責，王老師(現任)代理
+        "會議記錄": { primary: "t2", sub: "t3" }  // 李老師(現任)負責，林老師(非現任)代理
+      }
+    }
+  };
+
+  const dutyTypes = ["召集人", "參加研習", "會議記錄"];
+
+  // ==========================================
+  // 2. 渲染區塊：產生學期列表 (每學期一列)
+  // ==========================================
+  function renderSemesters() {
+    const container = document.getElementById("semestersContainer");
+    container.innerHTML = "";
+
+    // 產生教師下拉選單的 HTML (包含一個空白選項)
+    let teacherOptions = `<option value="">(無)</option>`;
+    data.teachers.forEach(t => {
+      // 標註非現任，方便辨識
+      const status = t.isCurrent ? "" : " (非現任)";
+      teacherOptions += `<option value="${t.id}">${t.name}${status}</option>`;
+    });
+
+    data.semesters.forEach(sem => {
+      // 建立學期列 Row
+      const row = document.createElement("div");
+      row.className = "semester-row";
+      row.style.backgroundColor = sem.color;
+      row.style.borderColor = darkenColor(sem.color); // 左側粗邊框加深
+
+      let dutiesHtml = "";
+      dutyTypes.forEach(duty => {
+        // 取得該學期、該職務的紀錄，若無則預設為空
+        const record = (data.duties[sem.id] && data.duties[sem.id][duty]) ? data.duties[sem.id][duty] : { primary: "", sub: "" };
+        
+        // 為了展示，這裡先用純 HTML 渲染，實際應用時可綁定 onchange 事件回傳後端
+        dutiesHtml += `
+          <div class="duty-box">
+            <div class="duty-title">${duty}</div>
+            <div class="select-group">
+              <label>負責：</label>
+              <select onchange="updateData('${sem.id}', '${duty}', 'primary', this.value)">
+                ${teacherOptions.replace(`value="${record.primary}"`, `value="${record.primary}" selected`)}
+              </select>
+            </div>
+            <div class="select-group substitute-label">
+              <label>由 (  ) 代理：</label>
+              <select onchange="updateData('${sem.id}', '${duty}', 'sub', this.value)">
+                ${teacherOptions.replace(`value="${record.sub}"`, `value="${record.sub}" selected`)}
+              </select>
+            </div>
+          </div>
+        `;
+      });
+
+      row.innerHTML = `
+        <div class="semester-title">${sem.name}</div>
+        <div class="duties-container">${dutiesHtml}</div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  // ==========================================
+  // 3. 核心邏輯：計算統計次數
+  // ==========================================
+  function calculateStatistics() {
+    // 初始化統計表 (只納入現任教師)
+    let stats = {};
+    data.teachers.forEach(t => {
+      if (t.isCurrent) {
+        stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 };
+      }
+    });
+
+    // 遍歷所有學期與職務
+    for (let semId in data.duties) {
+      for (let duty in data.duties[semId]) {
+        let record = data.duties[semId][duty];
+        let primaryId = record.primary;
+        let subId = record.sub;
+
+        // 取得教師物件以判斷是否為現任
+        let primaryTeacher = data.teachers.find(t => t.id === primaryId);
+        let subTeacher = data.teachers.find(t => t.id === subId);
+
+        let pIsCurrent = primaryTeacher ? primaryTeacher.isCurrent : false;
+        let sIsCurrent = subTeacher ? subTeacher.isCurrent : false;
+
+        let winnerId = null; // 決定這一分給誰
+
+        // 【統計判定矩陣實作】
+        if (subId && sIsCurrent) {
+          // 有代理人，且代理人是現任 -> 分數給代理人 (情境 C, E)
+          winnerId = subId;
+        } else if (primaryId && pIsCurrent) {
+          // 沒有代理人(或代理人非現任)，且原負責人是現任 -> 分數給原負責人 (情境 A, D)
+          winnerId = primaryId;
+        } 
+        // 其他狀況 (情境 B, F) 兩人皆非現任 -> winnerId 維持 null，不計分
+
+        // 如果得主是現任教師，則加分
+        if (winnerId && stats[winnerId]) {
+          stats[winnerId][duty]++;
+          stats[winnerId].total++;
+        }
+      }
+    }
+
+    // 渲染統計表
+    const tbody = document.getElementById("statisticsBody");
+    tbody.innerHTML = "";
+    Object.values(stats).forEach(s => {
+      tbody.innerHTML += `
         <tr>
-
-          <th class="px-4 py-3 text-left">學期</th>
-
-          <th class="px-4 py-3 text-left">領域召集人</th>
-
-          <th class="px-4 py-3 text-left">研習</th>
-
-          <th class="px-4 py-3 text-left">會議記錄</th>
-
-          <th v-if="isAdmin"></th>
-
+          <td><strong>${s.name}</strong></td>
+          <td>${s["召集人"]}</td>
+          <td>${s["參加研習"]}</td>
+          <td>${s["會議記錄"]}</td>
+          <td><strong>${s.total}</strong></td>
         </tr>
-
-      </thead>
-
-
-      <tbody>
-
-        <tr
-          v-for="(item,i) in sortedWorkHistory"
-          :key="item.originalIndex"
-          class="border-b"
-        >
-
-          <td class="px-4 py-3">
-
-            <input
-              v-if="isAdmin"
-              v-model="item.row.semester"
-              @change="saveData"
-              class="w-full border rounded p-1"
-            >
-
-            <span v-else>
-              {{item.row.semester}}
-            </span>
-
-          </td>
-
-
-          <td class="px-4 py-3">
-
-            <select
-              v-if="isAdmin"
-              v-model="item.row.convener_original"
-              @change="saveData"
-              class="w-full border rounded p-1"
-            >
-
-              <option value="">請選擇</option>
-
-              <option
-                v-for="t in [...activeTeachers,...archivedTeachers]"
-                :key="'c'+t"
-                :value="t"
-              >
-                {{t}}
-              </option>
-
-            </select>
-
-            <span v-else>
-              {{item.row.convener_original||'-'}}
-            </span>
-
-          </td>
-
-
-          <td class="px-4 py-3">
-
-            <select
-              v-if="isAdmin"
-              v-model="item.row.training_original"
-              @change="saveData"
-              class="w-full border rounded p-1"
-            >
-
-              <option value="">請選擇</option>
-
-              <option
-                v-for="t in [...activeTeachers,...archivedTeachers]"
-                :key="'t'+t"
-                :value="t"
-              >
-                {{t}}
-              </option>
-
-            </select>
-
-            <span v-else>
-              {{item.row.training_original||'-'}}
-            </span>
-
-          </td>
-
-
-          <td class="px-4 py-3">
-
-            <select
-              v-if="isAdmin"
-              v-model="item.row.minutes_original"
-              @change="saveData"
-              class="w-full border rounded p-1"
-            >
-
-              <option value="">請選擇</option>
-
-              <option
-                v-for="t in [...activeTeachers,...archivedTeachers]"
-                :key="'m'+t"
-                :value="t"
-              >
-                {{t}}
-              </option>
-
-            </select>
-
-            <span v-else>
-              {{item.row.minutes_original||'-'}}
-            </span>
-
-          </td>
-
-
-          <td
-            v-if="isAdmin"
-            class="text-center"
-          >
-
-            <button
-              @click="removeHistoryRow(item.originalIndex)"
-              class="text-red-500 p-2"
-            >
-
-              <i class="fa-solid fa-trash-can"></i>
-
-            </button>
-
-          </td>
-
-        </tr>
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-</div>
-
-</div>
-
-
-<!-- ==================================
-     會議紀錄
-================================== -->
-
-<div
-  v-if="currentView==='meetings'"
-  key="meetings"
-  class="space-y-6"
->
-
-<div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
-
-
-<div class="flex justify-between items-center mb-4 border-b pb-3">
-
-  <div>
-
-    <h3 class="text-lg font-medium text-gray-800">
-
-      <i class="fa-regular fa-folder-open mr-2 text-yellow-500"></i>
-
-      雲端會議紀錄
-
-    </h3>
-
-    <p class="text-xs text-gray-500 mt-1">
-
-      會議檔案存放於 Google Drive，本頁只儲存「共用檢視連結」。
-
-    </p>
-
-  </div>
-
-
-  <button
-    v-if="isAdmin"
-    @click="addMeetingLink"
-    class="px-3 py-2 bg-blue-600 text-white rounded text-sm"
-  >
-
-    <i class="fa-solid fa-plus mr-1"></i>
-
-    新增會議紀錄
-
-  </button>
-
-</div>
-
-
-<!-- 管理員 -->
-
-<div
-  v-if="isAdmin"
-  class="space-y-3"
->
-
-  <div
-    v-for="(link,index) in appData.meetings"
-    :key="link.id || index"
-    class="border rounded-lg p-4 bg-gray-50"
-  >
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-
-      <div class="lg:col-span-4">
-
-        <label class="block text-xs font-semibold text-gray-500 mb-1">
-
-          會議名稱
-
-        </label>
-
-        <input
-          v-model="link.title"
-          placeholder="例如：115學年度上學期第一次數學領域會議"
-          class="w-full border-gray-300 rounded p-2 border text-sm"
-        >
-
-      </div>
-
-
-      <div class="lg:col-span-6">
-
-        <label class="block text-xs font-semibold text-gray-500 mb-1">
-
-          Google Drive 共用檢視連結
-
-        </label>
-
-        <input
-          v-model="link.url"
-          placeholder="貼上 Google Drive 共用連結"
-          type="url"
-          class="w-full border-gray-300 rounded p-2 border text-sm"
-        >
-
-      </div>
-
-
-      <div class="lg:col-span-2 flex gap-2 items-end justify-end">
-
-        <button
-          @click="testMeetingLink(link)"
-          :disabled="!link.url"
-          class="px-3 py-2 bg-white border border-blue-300 text-blue-600 rounded text-sm disabled:opacity-40"
-        >
-
-          <i class="fa-solid fa-arrow-up-right-from-square"></i>
-
-          測試
-
-        </button>
-
-
-        <button
-          @click="saveMeeting(index)"
-          class="px-3 py-2 bg-green-600 text-white rounded text-sm"
-        >
-
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-
-          儲存
-
-        </button>
-
-
-        <button
-          @click="removeMeetingLink(index)"
-          class="px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded text-sm"
-        >
-
-          <i class="fa-solid fa-trash"></i>
-
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <div
-      v-if="link.url"
-      class="mt-3 text-xs text-gray-500 break-all"
-    >
-
-      <i class="fa-solid fa-link mr-1"></i>
-
-      {{link.url}}
-
-    </div>
-
-  </div>
-
-
-  <div
-    v-if="appData.meetings.length===0"
-    class="text-center py-8 text-gray-400"
-  >
-
-    尚無會議紀錄。
-
-  </div>
-
-</div>
-
-
-<!-- 一般瀏覽者 -->
-
-<div
-  v-else
-  class="space-y-3"
->
-
-  <div
-    v-for="(link,index) in appData.meetings"
-    :key="link.id || index"
-    class="flex items-center gap-4 p-4 border rounded-lg hover:bg-yellow-50 transition-colors"
-  >
-
-    <div
-      class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500"
-    >
-
-      <i class="fa-solid fa-file-pdf"></i>
-
-    </div>
-
-
-    <div class="flex-1 min-w-0">
-
-      <div class="font-medium text-gray-800">
-
-        {{link.title || '未命名會議紀錄'}}
-
-      </div>
-
-
-      <div
-        v-if="link.url"
-        class="text-xs text-gray-400 mt-1 truncate"
-      >
-
-        Google Drive 雲端檔案
-
-      </div>
-
-
-      <div
-        v-else
-        class="text-sm text-red-400 mt-1"
-      >
-
-        尚未設定雲端連結
-
-      </div>
-
-    </div>
-
-
-    <a
-      v-if="link.url"
-      :href="link.url"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 whitespace-nowrap"
-    >
-
-      開啟會議紀錄
-
-      <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
-
-    </a>
-
-  </div>
-
-
-  <div
-    v-if="appData.meetings.length===0"
-    class="text-center py-10 text-gray-400"
-  >
-
-    目前沒有會議紀錄。
-
-  </div>
-
-</div>
-
-</div>
-
-</div>
-
-
-<!-- ==================================
-     評鑑計畫
-================================== -->
-
-<div
-  v-if="currentView==='evaluations'"
-  key="evaluations"
->
-
-<div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
-
-  <div class="flex justify-between items-center mb-4 border-b pb-2">
-
-    <h3 class="text-lg font-medium">
-
-      <i class="fa-solid fa-file-signature mr-2 text-purple-500"></i>
-
-      歷年評鑑計畫表連結
-
-    </h3>
-
-
-    <button
-      v-if="isAdmin"
-      @click="addEvalLink"
-      class="px-3 py-1 bg-blue-50 text-blue-600 border rounded text-sm"
-    >
-
-      <i class="fa-solid fa-plus mr-1"></i>
-
-      新增連結
-
-    </button>
-
-  </div>
-
-
-  <ul class="space-y-3">
-
-    <li
-      v-for="(link,index) in appData.evaluations"
-      :key="index"
-      class="flex items-center gap-3 p-2"
-    >
-
-      <template v-if="isAdmin">
-
-        <input
-          v-model="link.title"
-          class="flex-1 border rounded p-2 text-sm"
-          placeholder="資料名稱"
-        >
-
-        <input
-          v-model="link.url"
-          class="flex-1 border rounded p-2 text-sm"
-          placeholder="Google Drive 連結"
-        >
-
-        <button
-          @click="saveData"
-          class="px-3 py-2 bg-green-600 text-white rounded"
-        >
-          儲存
-        </button>
-
-        <button
-          @click="removeEvalLink(index)"
-          class="text-red-500"
-        >
-
-          <i class="fa-solid fa-xmark"></i>
-
-        </button>
-
-      </template>
-
-
-      <template v-else>
-
-        <span class="flex-1 text-sm font-medium">
-
-          {{link.title || '未命名連結'}}
-
-        </span>
-
-
-        <a
-          v-if="link.url"
-          :href="link.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-purple-600 underline"
-        >
-
-          點擊前往 ↗
-
-        </a>
-
-      </template>
-
-    </li>
-
-  </ul>
-
-</div>
-
-</div>
-
-
-<!-- ==================================
-     評鑑結果
-================================== -->
-
-<div
-  v-if="currentView==='eval_results'"
-  key="eval_results"
->
-
-<div class="bg-white rounded-lg shadow p-6 border-t-4 border-teal-500">
-
-  <div class="flex justify-between items-center mb-4 border-b pb-2">
-
-    <h3 class="text-lg font-medium">
-
-      <i class="fa-solid fa-file-circle-check mr-2 text-teal-500"></i>
-
-      歷年評鑑審查結果連結
-
-    </h3>
-
-
-    <button
-      v-if="isAdmin"
-      @click="addEvalResultLink"
-      class="px-3 py-1 bg-blue-50 text-blue-600 border rounded text-sm"
-    >
-
-      <i class="fa-solid fa-plus mr-1"></i>
-
-      新增連結
-
-    </button>
-
-  </div>
-
-
-  <ul class="space-y-3">
-
-    <li
-      v-for="(link,index) in appData.eval_results"
-      :key="index"
-      class="flex items-center gap-3 p-2"
-    >
-
-      <template v-if="isAdmin">
-
-        <input
-          v-model="link.title
+      `;
+    });
+  }
+
+  // 當下拉選單改變時，更新暫存資料並重新計算統計
+  function updateData(semId, duty, field, val) {
+    if(!data.duties[semId]) data.duties[semId] = {};
+    if(!data.duties[semId][duty]) data.duties[semId][duty] = { primary: "", sub: "" };
+    
+    data.duties[semId][duty][field] = val;
+    calculateStatistics(); // 數值改變，即時更新下方統計表！
+  }
+
+  // 輔助工具：加深邊框顏色
+  function darkenColor(color) {
+    return "#b0bec5"; // 示意用，實務上可寫 Hex 轉換
+  }
+
+  // 初始化執行
+  renderSemesters();
+  calculateStatistics();
+
+</script>
+</body>
+</html>
