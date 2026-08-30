@@ -1,330 +1,913 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>班級雲端管理系統 v2</title>
-  <!-- 引入 Tailwind CSS -->
+  <title>數學領域工作管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <!-- 引入 DOMPurify 防止 XSS 攻擊 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .prose h3 { font-size: 1.125rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #1f2937; }
+    .prose p { margin-bottom: 0.75rem; line-height: 1.5; color: #4b5563; }
+    .prose ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 1rem; color: #4b5563; }
+    .prose li { margin-bottom: 0.25rem; }
+    .prose strong { font-weight: 600; color: #111827; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  <div id="app" class="max-w-5xl mx-auto p-4 md:p-6" v-cloak>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+  <div id="app" v-cloak class="flex h-screen overflow-hidden relative">
     
-    <!-- 頂部導覽與狀態列 -->
-    <header class="flex flex-col md:flex-row justify-between items-center bg-white shadow-sm rounded-xl p-4 mb-6">
-      <h1 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
-        <span>🏫</span> 高年級班級管理系統
-      </h1>
-      <div class="flex items-center gap-4 mt-4 md:mt-0">
-        <!-- 雲端同步狀態燈號 -->
-        <div class="flex items-center gap-2 text-sm font-medium px-3 py-1 rounded-full"
-             :class="{
-               'bg-green-100 text-green-700': syncStatus === '已同步',
-               'bg-yellow-100 text-yellow-700': syncStatus === '儲存中...' || syncStatus === '讀取中...',
-               'bg-red-100 text-red-700': syncStatus.includes('失敗')
-             }">
-          <span class="relative flex h-3 w-3">
-            <span v-if="syncStatus === '儲存中...' || syncStatus === '讀取中...'" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-current"></span>
-          </span>
-          {{ syncStatus }}
-        </div>
-
-        <!-- 登入 / 登出按鈕 -->
-        <div v-if="!isAdmin" class="flex gap-2">
-          <input type="password" v-model="adminPassword" placeholder="輸入管理密碼" 
-                 class="border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <button @click="login" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm transition">登入管理</button>
-        </div>
-        <div v-else>
-          <button @click="logout" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-sm transition">登出管理模式</button>
+    <!-- 管理員登入彈窗 -->
+    <div v-if="showLoginModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div class="bg-white p-6 rounded-lg shadow-xl w-80">
+        <h3 class="text-lg font-bold mb-4 text-gray-800"><i class="fa-solid fa-lock mr-2 text-slate-500"></i>管理員登入</h3>
+        <input v-model="inputPassword" @keyup.enter="login" type="password" placeholder="請輸入管理員密碼..." class="w-full border-gray-300 rounded-md p-2 mb-4 border focus:ring-blue-500 focus:border-blue-500">
+        <div class="flex justify-end gap-2">
+          <button @click="showLoginModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">取消</button>
+          <button @click="login" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">登入</button>
         </div>
       </div>
-    </header>
+    </div>
 
-    <!-- 主要內容區 -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 側邊欄 -->
+    <aside class="w-64 bg-slate-800 text-white flex flex-col h-full shadow-xl z-10 transition-all duration-300">
+      <div class="p-5 flex items-center justify-between border-b border-slate-700">
+        <h1 class="text-xl font-bold tracking-wider"><i class="fa-solid fa-square-root-variable mr-2"></i>數學領域會議</h1>
+      </div>
       
-      <!-- 左側：學生名單與工作分配 -->
-      <div class="lg:col-span-2 space-y-6">
-        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold flex items-center gap-2"><span>📋</span> 工作分配與名單</h2>
-            <button v-if="isAdmin" @click="addStudent" class="text-sm bg-emerald-50 text-emerald-600 px-2 py-1 rounded hover:bg-emerald-100">+ 新增學生</button>
+      <nav class="flex-1 overflow-y-auto py-4">
+        <ul class="space-y-1">
+          <li>
+            <a href="#" @click.prevent="currentView = 'history'" :class="{'bg-blue-600': currentView === 'history'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-users-gear w-6"></i>歷屆工作職位
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'meetings'" :class="{'bg-blue-600': currentView === 'meetings'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-regular fa-folder-open w-6"></i>歷年會議紀錄
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'evaluations'" :class="{'bg-blue-600': currentView === 'evaluations'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-file-signature w-6"></i>評鑑計畫表
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="currentView = 'eval_results'" :class="{'bg-blue-600': currentView === 'eval_results'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors">
+              <i class="fa-solid fa-file-circle-check w-6"></i>評鑑審查結果
+            </a>
+          </li>
+          <!-- AI 議案助手選單 (僅管理員可見) -->
+          <li v-if="isAdmin" class="mt-4 border-t border-slate-700 pt-2">
+            <a href="#" @click.prevent="currentView = 'ai_assistant'" :class="{'bg-purple-600': currentView === 'ai_assistant'}" class="block px-6 py-3 hover:bg-slate-700 transition-colors text-purple-200 hover:text-purple-100">
+              <i class="fa-solid fa-wand-magic-sparkles w-6"></i>AI 議案助手
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <div class="p-4 border-t border-slate-700 text-xs text-slate-400">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center">
+            <span class="w-2 h-2 rounded-full mr-2" :class="syncStatus === 'synced' ? 'bg-green-500' : 'bg-yellow-500'"></span>狀態: {{ syncStatusText }}
           </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b-2 border-slate-200 text-slate-500">
-                  <th class="py-2 px-2 w-16">座號</th>
-                  <th class="py-2 px-2 w-24">姓名</th>
-                  <th class="py-2 px-2">負責工作 / 備註</th>
-                  <th v-if="isAdmin" class="py-2 px-2 w-16 text-center">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(student, index) in classData.students" :key="index" class="border-b border-slate-100 hover:bg-slate-50">
-                  <td class="py-2 px-2">
-                    <input v-if="isAdmin" type="number" v-model="student.id" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-500">
-                    <span v-else>{{ student.id }}</span>
-                  </td>
-                  <td class="py-2 px-2">
-                    <input v-if="isAdmin" type="text" v-model="student.name" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-500">
-                    <span v-else>{{ student.name }}</span>
-                  </td>
-                  <td class="py-2 px-2">
-                    <input v-if="isAdmin" type="text" v-model="student.task" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-500">
-                    <span v-else>{{ student.task }}</span>
-                  </td>
-                  <td v-if="isAdmin" class="py-2 px-2 text-center">
-                    <button @click="removeStudent(index)" class="text-red-400 hover:text-red-600 text-sm">刪除</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p v-if="isAdmin" class="text-xs text-slate-400 mt-3 flex items-center gap-1">
-            <span>💡</span> 直接修改欄位內容，系統會於停止輸入後 1.5 秒自動存檔至雲端。
-          </p>
-        </section>
+          <button v-if="!isAdmin" @click="showLoginModal = true" class="text-slate-500 hover:text-white transition-colors" title="管理員登入"><i class="fa-solid fa-lock"></i></button>
+          <button v-else @click="logout" class="text-green-400 hover:text-white transition-colors" title="登出管理員模式"><i class="fa-solid fa-unlock"></i> 管理員模式</button>
+        </div>
+        <div>上次同步: {{ lastSyncTime }}</div>
+      </div>
+    </aside>
 
-        <!-- 常用連結區塊 -->
-        <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold flex items-center gap-2"><span>🔗</span> 班級常用連結</h2>
-            <button v-if="isAdmin" @click="addLink" class="text-sm bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100">+ 新增連結</button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div v-for="(link, index) in classData.links" :key="index" class="p-3 border border-slate-100 rounded-lg flex items-center justify-between group hover:border-blue-200">
-              <div v-if="isAdmin" class="flex-1 mr-2 space-y-2">
-                <input type="text" v-model="link.title" placeholder="連結名稱" class="w-full text-sm border border-slate-200 rounded px-2 py-1">
-                <input type="text" v-model="link.url" placeholder="網址 (https://...)" class="w-full text-sm border border-slate-200 rounded px-2 py-1">
+    <!-- 主內容區 -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+      <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-0">
+        <h2 class="text-xl font-semibold text-gray-700">{{ viewTitle }}</h2>
+        <button v-if="isAdmin" @click="forceSync" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+          <i class="fa-solid fa-cloud-arrow-up mr-1"></i> 強制同步雲端
+        </button>
+      </header>
+      
+      <div class="flex-1 overflow-auto p-8">
+        <transition name="fade" mode="out-in">
+          
+          <!-- 視圖 1: 歷屆工作職位紀錄 -->
+          <div v-if="currentView === 'history'" key="history" class="space-y-6">
+            
+            <!-- 領域成員名單管理區 -->
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+              <div class="flex items-center justify-between mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-user-tag mr-2 text-blue-500"></i>領域成員名單</h3>
+                <button @click="showArchived = !showArchived" class="text-sm text-gray-500 hover:text-gray-700">
+                  <i class="fa-solid" :class="showArchived ? 'fa-eye-slash' : 'fa-eye'"></i> 
+                  {{ showArchived ? '隱藏封存區' : '顯示封存區' }}
+                </button>
               </div>
-              <a v-else :href="link.url" target="_blank" class="text-blue-600 hover:underline flex-1 truncate font-medium">
-                {{ link.title }}
-              </a>
-              <button v-if="isAdmin" @click="removeLink(index)" class="text-red-300 hover:text-red-500 ml-2 text-sm opacity-0 group-hover:opacity-100 transition">✕</button>
+              
+              <div class="mb-4">
+                <div class="text-sm font-semibold text-gray-600 mb-2">現任領域成員</div>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="name in activeTeachers" :key="name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    <template v-if="editingOldName !== name">
+                      {{ name }}
+                      <template v-if="isAdmin">
+                        <button @click="startEdit(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button @click="archiveTeacher(name)" class="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none" title="移至封存區"><i class="fa-solid fa-box-archive text-xs"></i></button>
+                      </template>
+                    </template>
+                    <template v-else>
+                      <input v-model="editingNewName" @keyup.enter="saveEdit" class="w-20 px-1 py-0.5 text-xs text-gray-800 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" />
+                      <button @click="saveEdit" class="ml-1 text-green-600 hover:text-green-800" title="儲存"><i class="fa-solid fa-check text-xs"></i></button>
+                      <button @click="cancelEdit" class="ml-1 text-red-500 hover:text-red-700" title="取消"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    </template>
+                  </span>
+                  <span v-if="activeTeachers.length === 0" class="text-sm text-gray-500 py-1">尚無現任領域成員。</span>
+                </div>
+              </div>
+
+              <div v-show="showArchived" class="mb-4 p-3 bg-gray-50 border rounded-md">
+                <div class="text-sm font-semibold text-gray-500 mb-2">已封存 (離職/外聘/代理/轉領域) 成員</div>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="name in archivedTeachers" :key="'archived-'+name" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-600 border border-gray-300">
+                    <template v-if="editingOldName !== name">
+                      {{ name }}
+                      <template v-if="isAdmin">
+                        <button @click="startEdit(name)" class="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none" title="編輯名字"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button @click="restoreTeacher(name)" class="ml-2 text-green-600 hover:text-green-700 focus:outline-none" title="恢復為現任領域成員"><i class="fa-solid fa-rotate-left text-xs"></i></button>
+                      </template>
+                    </template>
+                    <template v-else>
+                      <input v-model="editingNewName" @keyup.enter="saveEdit" class="w-20 px-1 py-0.5 text-xs text-gray-800 border border-gray-400 rounded focus:outline-none bg-white" />
+                      <button @click="saveEdit" class="ml-1 text-green-600 hover:text-green-800" title="儲存"><i class="fa-solid fa-check text-xs"></i></button>
+                      <button @click="cancelEdit" class="ml-1 text-red-500 hover:text-red-700" title="取消"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    </template>
+                  </span>
+                  <span v-if="archivedTeachers.length === 0" class="text-sm text-gray-400 py-1">目前無封存名單。</span>
+                </div>
+              </div>
+
+              <div v-if="isAdmin" class="flex gap-2">
+                <input v-model="newTeacherName" @keyup.enter="addTeacher" type="text" placeholder="輸入成員姓名 (按 Enter 新增)" class="flex-1 max-w-xs border-gray-300 rounded-md shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm" />
+                <button @click="addTeacher" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"><i class="fa-solid fa-plus mr-1"></i>新增成員</button>
+              </div>
+            </div>
+
+            <!-- 工作分配表 -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+              <div class="flex justify-between items-center p-6 border-b bg-gray-50">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-table-list mr-2 text-gray-500"></i>工作分配表</h3>
+                <button v-if="isAdmin" @click="addHistoryRow" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-sm">
+                  <i class="fa-solid fa-plus mr-1"></i>新增學期
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full">
+                  <thead class="bg-slate-100 border-b">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/6">學期</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">領域召集人</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">研習</th>
+                      <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">會議記錄</th>
+                      <th v-if="isAdmin" class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(rowObj, i) in sortedWorkHistory" :key="rowObj.originalIndex" 
+                        class="border-b transition-colors"
+                        :class="getYearColorClass(rowObj.row.semester)">
+                      
+                      <td class="px-4 py-4 align-top">
+                        <input v-if="isAdmin" v-model.lazy="rowObj.row.semester" @change="saveData" class="w-full border-gray-300 rounded p-1 text-sm font-medium focus:ring-blue-500 focus:border-blue-500 bg-white/60" placeholder="例如: 115學年上學期">
+                        <span v-else class="text-sm font-bold text-gray-700">{{ rowObj.row.semester || '-' }}</span>
+                      </td>
+                      
+                      <!-- 領域召集人 -->
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <select v-model="rowObj.row.convener_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任領域成員">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <div class="flex items-center gap-1 mt-1">
+                            <select v-model="rowObj.row.convener_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
+                              <optgroup label="現任領域成員">
+                                <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                              <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                                <option v-for="t in archivedTeachers" :key="'a-archived-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                            </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
+                          </div>
+                        </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.convener_original || '-' }}</div>
+                           <div v-if="rowObj.row.convener_actual && rowObj.row.convener_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             {{ rowObj.row.convener_actual }}代理
+                           </div>
+                        </div>
+                      </td>
+
+                      <!-- 研習 -->
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <select v-model="rowObj.row.training_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任領域成員">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <div class="flex items-center gap-1 mt-1">
+                            <select v-model="rowObj.row.training_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
+                              <optgroup label="現任領域成員">
+                                <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                              <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                                <option v-for="t in archivedTeachers" :key="'a-archived-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                            </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
+                          </div>
+                        </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.training_original || '-' }}</div>
+                           <div v-if="rowObj.row.training_actual && rowObj.row.training_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             {{ rowObj.row.training_actual }}代理
+                           </div>
+                        </div>
+                      </td>
+
+                      <!-- 會議記錄 -->
+                      <td class="px-4 py-3 align-top">
+                        <div v-if="isAdmin" class="flex flex-col gap-1">
+                          <select v-model="rowObj.row.minutes_original" @change="saveData" class="w-full border-gray-400 rounded p-1.5 text-base font-medium focus:ring-blue-500 focus:border-blue-500 shadow-sm bg-white">
+                            <option value="">請選擇</option>
+                            <optgroup label="現任領域成員">
+                              <option v-for="t in activeTeachers" :key="'o-active-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                            <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                              <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                            </optgroup>
+                          </select>
+                          <div class="flex items-center gap-1 mt-1">
+                            <select v-model="rowObj.row.minutes_actual" @change="saveData" class="flex-1 border-gray-300 rounded p-1 text-xs focus:ring-blue-500 focus:border-blue-500 bg-white/70">
+                              <option value="">無</option>
+                              <optgroup label="現任領域成員">
+                                <option v-for="t in activeTeachers" :key="'a-active-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                              <optgroup label="非現任領域成員" v-if="archivedTeachers.length > 0">
+                                <option v-for="t in archivedTeachers" :key="'o-archived-'+t" :value="t">{{ t }}</option>
+                              </optgroup>
+                            </select>
+                            <span class="text-xs text-blue-600 whitespace-nowrap font-medium">代理</span>
+                          </div>
+                        </div>
+                        <div v-else class="text-sm">
+                           <div class="font-bold text-gray-800 text-base">{{ rowObj.row.minutes_original || '-' }}</div>
+                           <div v-if="rowObj.row.minutes_actual && rowObj.row.minutes_original" class="text-xs text-blue-600 mt-1 font-medium bg-blue-50/50 inline-block px-1.5 py-0.5 rounded">
+                             {{ rowObj.row.minutes_actual }}代理
+                           </div>
+                        </div>
+                      </td>
+
+                      <td v-if="isAdmin" class="px-4 py-2 text-center align-middle">
+                        <button @click="removeHistoryRow(rowObj.originalIndex)" class="text-red-500 hover:text-red-700 p-2" title="刪除此列"><i class="fa-solid fa-trash-can"></i></button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 職位次數統計 -->
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-emerald-500">
+              <h3 class="text-lg font-medium text-gray-800 mb-4"><i class="fa-solid fa-chart-pie mr-2 text-emerald-500"></i>各職位擔任次數統計</h3>
+              
+              <div class="text-xs text-gray-600 mb-4 bg-yellow-50 p-3 border border-yellow-200 rounded leading-relaxed">
+                <div class="font-bold text-yellow-700 mb-1"><i class="fa-solid fa-circle-info mr-1"></i>計次規則說明：</div>
+                <ul class="list-disc list-inside space-y-1 ml-1">
+                  <li>若代理人為<span class="font-semibold text-blue-600">「現任領域成員」</span>：表示領域內老師互助，次數算在<span class="font-semibold">「代理人」</span>身上（實際執行者）。</li>
+                  <li>若代理人為<span class="font-semibold text-gray-500">「非現任領域成員」</span>：如外聘、代課老師或轉領域，次數則算在<span class="font-semibold">「原定負責人」</span>身上。</li>
+                  <li>若代理人與先前被代理人均為<span class="font-semibold text-blue-600">「現任領域成員」</span>：則統計次數為實際執行者（即<span class="font-semibold">代理人</span>）。</li>
+                </ul>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="stat in activeTeacherStats" :key="stat.name" class="border rounded-lg p-4 bg-gray-50 shadow-sm">
+                  <div class="font-bold text-gray-700 text-lg mb-2 border-b pb-1">{{ stat.name }}</div>
+                  <ul class="text-sm space-y-1 text-gray-600">
+                    <li class="flex justify-between"><span>領域召集人：</span> <span class="font-medium text-blue-600">{{ stat.convener }} 次</span></li>
+                    <li class="flex justify-between"><span>外出研習：</span> <span class="font-medium text-blue-600">{{ stat.training }} 次</span></li>
+                    <li class="flex justify-between"><span>會議記錄：</span> <span class="font-medium text-blue-600">{{ stat.minutes }} 次</span></li>
+                  </ul>
+                  <div class="mt-2 pt-2 border-t flex justify-between font-semibold text-gray-800">
+                    <span>總計負擔次數：</span> <span>{{ stat.total }} 次</span>
+                  </div>
+                </div>
+              </div>
+              <p v-if="activeTeacherStats.length === 0" class="text-sm text-gray-500 mt-2">尚無現任領域成員統計資料。</p>
+
+              <div class="mt-6 border-t pt-4" v-if="archivedTeacherStats.length > 0">
+                <button @click="showArchivedStats = !showArchivedStats" class="flex items-center text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
+                  <i class="fa-solid w-4" :class="showArchivedStats ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                  <span class="ml-1">顯示非現任領域成員實際執行次數</span>
+                </button>
+                <div v-show="showArchivedStats" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
+                  <div v-for="stat in archivedTeacherStats" :key="stat.name" class="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-100">
+                    <div class="font-bold text-gray-500 text-base mb-2 border-b border-gray-200 pb-1">{{ stat.name }} <span class="text-xs font-normal">(非現任)</span></div>
+                    <ul class="text-sm space-y-1 text-gray-500">
+                      <li class="flex justify-between"><span>領域召集人：</span> <span>{{ stat.convener }} 次</span></li>
+                      <li class="flex justify-between"><span>外出研習：</span> <span>{{ stat.training }} 次</span></li>
+                      <li class="flex justify-between"><span>會議記錄：</span> <span>{{ stat.minutes }} 次</span></li>
+                    </ul>
+                    <div class="mt-2 pt-2 border-t border-gray-200 flex justify-between font-semibold text-gray-600">
+                      <span>總實際執行：</span> <span>{{ stat.total }} 次</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </section>
-      </div>
 
-      <!-- 右側：AI 班級助教 (僅管理員可見) -->
-      <div class="lg:col-span-1" v-if="isAdmin">
-        <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-indigo-100 h-full flex flex-col">
-          <h2 class="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2"><span>✨</span> AI 班級助教</h2>
-          
-          <div class="flex-1 bg-white rounded-lg p-4 mb-4 border border-indigo-100 overflow-y-auto max-h-[400px] text-sm leading-relaxed text-slate-700 shadow-inner" v-html="aiResponse">
-            <!-- AI 回應會渲染在這裡 -->
+          <!-- 視圖 2: 歷年會議紀錄 -->
+          <div v-if="currentView === 'meetings'" key="meetings" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-regular fa-folder-open mr-2 text-yellow-500"></i>雲端會議紀錄連結</h3>
+                <button v-if="isAdmin" @click="addMeetingLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.meetings" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="連結名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                    <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                       點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                    <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
+                </li>
+                <li v-if="appData.meetings.length === 0" class="text-gray-500 text-sm">目前無任何會議紀錄連結。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 3: 評鑑計畫表 -->
+          <div v-if="currentView === 'evaluations'" key="evaluations" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-signature mr-2 text-purple-500"></i>歷年評鑑計畫表連結</h3>
+                <button v-if="isAdmin" @click="addEvalLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.evaluations" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="資料名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
+                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                     </a>
+                     <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
+                </li>
+                <li v-if="appData.evaluations.length === 0" class="text-gray-500 text-sm">目前無任何計畫表連結。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 4: 評鑑審查結果 -->
+          <div v-if="currentView === 'eval_results'" key="eval_results" class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-teal-500">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-file-circle-check mr-2 text-teal-500"></i>歷年評鑑審查結果連結</h3>
+                <button v-if="isAdmin" @click="addEvalResultLink" class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded text-sm hover:bg-blue-100 transition-colors"><i class="fa-solid fa-plus mr-1"></i>新增連結</button>
+              </div>
+              <ul class="space-y-3">
+                <li v-for="(link, index) in appData.eval_results" :key="index" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                  <template v-if="isAdmin">
+                    <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑審查結果)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    <a v-if="link.url" :href="link.url" target="_blank" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <button @click="removeEvalResultLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
+                  </template>
+                  <template v-else>
+                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
+                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
+                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                     </a>
+                     <span v-else class="text-sm text-gray-400">尚無網址</span>
+                  </template>
+                </li>
+                <li v-if="appData.eval_results.length === 0" class="text-gray-500 text-sm">目前無任何審查結果連結。</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 視圖 5: AI 議案助手 (僅管理員渲染) -->
+          <div v-if="currentView === 'ai_assistant' && isAdmin" key="ai_assistant" class="space-y-6 h-full flex flex-col">
+            <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500 flex-1 flex flex-col">
+              <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-robot mr-2 text-purple-500"></i>會議議案 AI 助手</h3>
+                <div class="flex items-center gap-2">
+                  <input v-model="geminiApiKey" type="password" placeholder="請貼上 Gemini API Key" class="border-gray-300 rounded p-1 text-xs focus:ring-purple-500 focus:border-purple-500 w-48 bg-gray-50">
+                </div>
+              </div>
+              <div class="flex gap-2 mb-4">
+                <button @click="aiMode = 'agenda'" :class="aiMode === 'agenda' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-lightbulb mr-1"></i> 議案發想與大綱</button>
+                <button @click="aiMode = 'record'" :class="aiMode === 'record' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-file-pen mr-1"></i> 決議潤飾與整理</button>
+              </div>
+              <div class="flex gap-6 flex-1 h-0">
+                <div class="w-1/2 flex flex-col">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ aiMode === 'agenda' ? '請簡述您想討論的議題方向：' : '請貼上會議中的草稿或零散筆記：' }}</label>
+                  <textarea v-model="aiInput" class="w-full flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 resize-none" :placeholder="aiMode === 'agenda' ? '例如：我想討論下學期五年級數學銜接教材的選用...' : '例如：大家同意銜接教材用南一版...'"></textarea>
+                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput || !geminiApiKey" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
+                    <i v-if="isGenerating" class="fa-solid fa-circle-notch fa-spin mr-2"></i>{{ isGenerating ? 'AI 正在思考中...' : (aiMode === 'agenda' ? '生成討論大綱' : '生成正式會議紀錄') }}
+                  </button>
+                </div>
+                <div class="w-1/2 flex flex-col">
+                  <div class="flex justify-between items-end mb-1">
+                    <label class="block text-sm font-medium text-gray-700">AI 生成結果：</label>
+                    <button v-if="aiOutput" @click="copyAiOutput" class="text-xs text-purple-600 hover:text-purple-800"><i class="fa-regular fa-copy mr-1"></i>複製結果</button>
+                  </div>
+                  <div class="w-full flex-1 border border-gray-300 rounded-md shadow-sm p-4 bg-gray-50 overflow-y-auto">
+                    <div v-if="aiOutput" v-html="compiledMarkdown" class="prose prose-sm max-w-none"></div>
+                    <div v-else class="h-full flex items-center justify-center text-gray-400 text-sm text-center">AI 產生的內容將顯示於此。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div class="mt-auto">
-            <textarea v-model="aiPrompt" rows="3" placeholder="例如：幫我寫一段提醒家長明天要帶水彩用具的 LINE 通知訊息..." 
-                      class="w-full border border-indigo-200 rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 resize-none mb-2"></textarea>
-            <button @click="askAI" :disabled="isAiThinking || !aiPrompt.trim()" 
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition disabled:bg-slate-300 disabled:cursor-not-allowed flex justify-center items-center gap-2">
-              <span v-if="isAiThinking" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-              {{ isAiThinking ? 'AI 思考中...' : '送出問題' }}
-            </button>
-          </div>
-        </div>
+        </transition>
       </div>
-      
-      <!-- 非管理員看到的右側提示 -->
-      <div class="lg:col-span-1" v-else>
-        <div class="bg-slate-100 p-6 rounded-xl text-center text-slate-500 h-full flex flex-col justify-center border border-dashed border-slate-300">
-          <span class="text-4xl mb-3">🔒</span>
-          <p>班級 AI 助教與編輯功能</p>
-          <p class="text-sm mt-1">請於右上角登入後開啟</p>
-        </div>
-      </div>
-
-    </div>
+    </main>
   </div>
 
-  <style>
-    /* 避免 Vue 載入前的畫面閃爍 */
-    [v-cloak] { display: none; }
-  </style>
-
   <script>
-    const { createApp, ref, onMounted, watch } = Vue;
-
-    // 您的 Google Apps Script 後端網址
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHvyp-20JfO9asfARNxCrcdJqHSrtN1fsp7g5Gk8VkIaUDyiyx95UgvXFdh7W9UaGTA/exec';
-
-    // 預設的班級資料結構（當雲端是空的時候使用）
-    const defaultData = {
-      students: [
-        { id: 1, name: '王小明', task: '擦黑板' },
-        { id: 2, name: '陳小華', task: '倒垃圾' }
-      ],
-      links: [
-        { title: '均一教育平台', url: 'https://www.junyiacademy.org/' },
-        { title: '班級相簿', url: '#' }
-      ]
-    };
+    const { createApp, ref, computed, onMounted, watch } = Vue;
 
     createApp({
       setup() {
-        const classData = ref(JSON.parse(JSON.stringify(defaultData))); 
         const isAdmin = ref(false);
-        const adminPassword = ref('');
-        const adminToken = ref(localStorage.getItem('adminToken') || '');
-        const syncStatus = ref('讀取中...');
-        
-        const aiPrompt = ref('');
-        const aiResponse = ref('<p class="text-slate-400 italic">嗨！我是您的專屬 AI 助教。您可以請我幫忙寫家長通知書、設計課程提問，或是處理行政文字。</p>');
-        const isAiThinking = ref(false);
-        let isInitialLoad = true; // 防止第一次載入時觸發自動存檔
+        const showLoginModal = ref(false);
+        const inputPassword = ref('');
+        const ADMIN_PASSWORD = 'math123'; 
 
-        // 1. 讀取資料
-        const loadData = async () => {
-          try {
-            syncStatus.value = '讀取中...';
-            const res = await fetch(GAS_URL);
-            const json = await res.json();
-            
-            // 確保有抓到資料，且資料不是空的
-            if (json.status === 'success' && json.data && Object.keys(json.data).length > 0) {
-              classData.value = json.data;
-            }
-            syncStatus.value = '已同步';
-            
-            // 延遲解除初始鎖定，確保載入的資料不會馬上觸發 watch 存檔
-            setTimeout(() => { isInitialLoad = false; }, 500);
-          } catch (e) {
-            console.error("雲端讀取失敗", e);
-            syncStatus.value = '讀取失敗';
-            isInitialLoad = false;
-          }
-        };
-
-        // 2. 登入與登出
-        const login = async () => {
-          if (!adminPassword.value) return;
-          try {
-            const res = await fetch(GAS_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'verifyAdmin', password: adminPassword.value })
-            });
-            const json = await res.json();
-            
-            if (json.status === 'success') {
-              isAdmin.value = true;
-              adminToken.value = json.token;
-              localStorage.setItem('adminToken', json.token);
-              adminPassword.value = '';
-            } else {
-              alert(json.message || "登入失敗");
-            }
-          } catch (e) {
-            alert("連線異常，請檢查網路");
+        const login = () => {
+          if (inputPassword.value === ADMIN_PASSWORD) {
+            isAdmin.value = true;
+            showLoginModal.value = false;
+            inputPassword.value = '';
+            sessionStorage.setItem('mathAdminAuth', 'true');
+          } else {
+            alert('密碼錯誤！');
+            inputPassword.value = '';
           }
         };
 
         const logout = () => {
           isAdmin.value = false;
-          adminToken.value = '';
-          localStorage.removeItem('adminToken');
-        };
-
-        // 3. 防抖自動存檔 (Debounce)
-        let saveTimeout;
-        const autoSave = () => {
-          if (!isAdmin.value || !adminToken.value || isInitialLoad) return;
-          
-          syncStatus.value = '儲存中...';
-          clearTimeout(saveTimeout);
-          
-          saveTimeout = setTimeout(async () => {
-            try {
-              const res = await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                  action: 'saveData', 
-                  token: adminToken.value, 
-                  data: classData.value 
-                })
-              });
-              const json = await res.json();
-              if (json.status === 'success') {
-                syncStatus.value = '已同步';
-              } else {
-                syncStatus.value = '權限失效';
-                logout(); // Token 過期或錯誤則自動登出
-              }
-            } catch (e) {
-              syncStatus.value = '儲存失敗';
-            }
-          }, 1500); 
-        };
-
-        // 4. 呼叫 AI (透過後端)
-        const askAI = async () => {
-          if (!aiPrompt.value.trim()) return;
-          
-          isAiThinking.value = true;
-          const currentPrompt = aiPrompt.value;
-          aiPrompt.value = ''; // 送出後先清空輸入框
-          aiResponse.value = '<p class="text-slate-500 animate-pulse">正在思考與生成內容...</p>';
-          
-          try {
-            const res = await fetch(GAS_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'askAI', prompt: currentPrompt })
-            });
-            const json = await res.json();
-            
-            if (json.status === 'success') {
-              // 將 AI 回傳的換行符號轉成 <br>，並使用 DOMPurify 過濾
-              const formattedHtml = json.data.replace(/\n/g, '<br>');
-              aiResponse.value = DOMPurify.sanitize(formattedHtml);
-            } else {
-              aiResponse.value = `<span class="text-red-500">發生錯誤：${json.message}</span>`;
-            }
-          } catch (e) {
-            aiResponse.value = '<span class="text-red-500">無法連線至 AI 伺服器</span>';
-          } finally {
-            isAiThinking.value = false;
+          sessionStorage.removeItem('mathAdminAuth');
+          // 登出時若在 AI 畫面，自動切回首頁
+          if (currentView.value === 'ai_assistant') {
+            currentView.value = 'history'; 
           }
         };
 
-        // 5. 介面操作函數
-        const addStudent = () => {
-          const nextId = classData.value.students.length > 0 
-            ? Math.max(...classData.value.students.map(s => s.id)) + 1 
-            : 1;
-          classData.value.students.push({ id: nextId, name: '', task: '' });
-        };
-        const removeStudent = (index) => {
-          if (confirm('確定要刪除這筆資料嗎？')) classData.value.students.splice(index, 1);
-        };
-        const addLink = () => classData.value.links.push({ title: '', url: '' });
-        const removeLink = (index) => {
-          if (confirm('確定要刪除這個連結嗎？')) classData.value.links.splice(index, 1);
+        const checkAuth = () => {
+          if (sessionStorage.getItem('mathAdminAuth') === 'true') {
+            isAdmin.value = true;
+          }
         };
 
-        // 啟動時執行
-        onMounted(() => {
-          loadData();
-          if (adminToken.value) isAdmin.value = true;
+        const currentView = ref('history');
+        const syncStatus = ref('synced'); 
+        const lastSyncTime = ref('尚未同步');
+        const GAS_URL = ''; 
+        
+        const newTeacherName = ref('');
+        const showArchived = ref(false);
+        const showArchivedStats = ref(false); 
+
+        const editingOldName = ref('');
+        const editingNewName = ref('');
+
+        const geminiApiKey = ref('');
+        const aiMode = ref('agenda');
+        const aiInput = ref('');
+        const aiOutput = ref('');
+        const isGenerating = ref(false);
+
+        const appData = ref({
+          teachers: [
+            { name: '陳奕任', isActive: true },
+            { name: '林孟瑜', isActive: true },
+            { name: '徐毓璘', isActive: true },
+            { name: '陳秀琴', isActive: true },
+            { name: '饒卿玄', isActive: true },
+            { name: '黃涓喬', isActive: true },
+            { name: '董宗翰', isActive: false },
+            { name: '孫韡', isActive: false },
+            { name: '李雯雯', isActive: false },
+            { name: '徐萍', isActive: false },
+            { name: '李宜縈', isActive: false },
+            { name: '林育璋', isActive: false },
+            { name: '陳馨蓓', isActive: false }
+          ],
+          workHistory: [
+            { semester: '112學年上學期', convener_original: '陳奕任', convener_actual: '', training_original: '饒卿玄', training_actual: '董宗翰', minutes_original: '黃涓喬', minutes_actual: '' },
+            { semester: '112學年下學期', convener_original: '林孟瑜', convener_actual: '', training_original: '孫韡', training_actual: '', minutes_original: '陳奕任', minutes_actual: '' },
+            { semester: '113學年上學期', convener_original: '饒卿玄', convener_actual: '董宗翰', training_original: '李雯雯', training_actual: '', minutes_original: '徐萍', minutes_actual: '' },
+            { semester: '113學年下學期', convener_original: '陳奕任', convener_actual: '', training_original: '李宜縈', training_actual: '', minutes_original: '林孟瑜', minutes_actual: '' },
+            { semester: '114學年上學期', convener_original: '陳奕任', convener_actual: '', training_original: '林育璋', training_actual: '', minutes_original: '陳秀琴', minutes_actual: '' },
+            { semester: '114學年下學期', convener_original: '李宜縈', convener_actual: '陳馨蓓', training_original: '黃涓喬', training_actual: '', minutes_original: '徐毓璘', minutes_actual: '' },
+            { semester: '115學年上學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' },
+            { semester: '115學年下學期', convener_original: '', convener_actual: '', training_original: '', training_actual: '', minutes_original: '', minutes_actual: '' }
+          ], 
+          meetings: [],    
+          evaluations: [],
+          eval_results: []
         });
 
-        // 監聽資料變動 (Deep Watch)
-        watch(classData, () => {
-          autoSave();
-        }, { deep: true });
+        // 智慧解析年份與學期來進行絕對排序 (由大到小)
+        const sortedWorkHistory = computed(() => {
+          if (!appData.value.workHistory) return [];
+          
+          return appData.value.workHistory.map((row, index) => ({
+            row: row,
+            originalIndex: index
+          })).sort((a, b) => {
+            const parseSemester = (str) => {
+              // 若為空白 (新增的列)，給予極大值讓它保證置頂
+              if (!str || !str.trim()) return { year: 9999, term: 9999 }; 
+              
+              // 擷取連續數字作為年份 (如 "112學年" -> 112)
+              const yMatch = str.match(/\d+/);
+              const year = yMatch ? parseInt(yMatch[0], 10) : -1;
+              
+              // 判定上下學期 (下學期權重設為 2，上學期為 1)
+              let term = 0;
+              if (str.includes('下')) term = 2;
+              else if (str.includes('上')) term = 1;
+              
+              return { year, term };
+            };
+            
+            const pA = parseSemester(a.row.semester);
+            const pB = parseSemester(b.row.semester);
+            
+            // 1. 先比年份 (年份大的排上面)
+            if (pA.year !== pB.year) return pB.year - pA.year; 
+            
+            // 2. 年份相同比學期 (下學期=2 > 上學期=1)
+            if (pA.term !== pB.term) return pB.term - pA.term; 
+            
+            // 3. 完全相同，或是都無法解析，則依照原本順序(新的在上面)
+            return b.originalIndex - a.originalIndex;
+          });
+        });
 
-        return { 
-          classData, isAdmin, adminPassword, syncStatus, 
-          login, logout, askAI, aiPrompt, aiResponse, isAiThinking,
-          addStudent, removeStudent, addLink, removeLink
+        const getYearColorClass = (semesterStr) => {
+          if (!semesterStr) return 'bg-white';
+          const match = semesterStr.match(/^(\d+)/);
+          if (!match) return 'bg-white';
+          const yearNum = parseInt(match[1]);
+          const colors = ['bg-blue-50/40', 'bg-emerald-50/40', 'bg-amber-50/40', 'bg-purple-50/40'];
+          return colors[yearNum % 4];
+        };
+
+        const viewTitle = computed(() => {
+          const titles = { 
+            'history': '歷屆工作職位紀錄', 
+            'meetings': '歷年會議紀錄', 
+            'evaluations': '評鑑計畫表',
+            'eval_results': '評鑑審查結果',
+            'ai_assistant': 'AI 議案助手' 
+          };
+          return titles[currentView.value];
+        });
+
+        const syncStatusText = computed(() => {
+          if (syncStatus.value === 'syncing') return '同步中...';
+          if (syncStatus.value === 'error') return '同步失敗 (僅儲存於本機)';
+          return '已儲存';
+        });
+
+        const activeTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => t.isActive).map(t => t.name) : []);
+        const archivedTeachers = computed(() => appData.value.teachers ? appData.value.teachers.filter(t => !t.isActive).map(t => t.name) : []);
+
+        const allTeacherStats = computed(() => {
+          const stats = {};
+          
+          const isActiveTeacher = (name) => {
+            const t = appData.value.teachers.find(teacher => teacher.name === name);
+            return t ? t.isActive : false;
+          };
+
+          if (appData.value.teachers) {
+            appData.value.teachers.forEach(t => {
+              stats[t.name] = { name: t.name, isActive: t.isActive, convener: 0, training: 0, minutes: 0, total: 0 };
+            });
+          }
+
+          if (appData.value.workHistory) {
+            appData.value.workHistory.forEach(row => {
+              const processRole = (roleType, originalName, actualName) => {
+                let creditTo = ''; 
+                if (originalName) {
+                  if (!actualName) {
+                    creditTo = originalName;
+                  } else {
+                    if (isActiveTeacher(actualName)) {
+                      creditTo = actualName;
+                    } else {
+                      creditTo = originalName;
+                    }
+                  }
+                } else if (actualName) {
+                    creditTo = actualName;
+                }
+
+                if (creditTo && stats[creditTo]) {
+                  stats[creditTo][roleType]++;
+                  stats[creditTo].total++;
+                }
+              };
+
+              processRole('convener', row.convener_original, row.convener_actual);
+              processRole('training', row.training_original, row.training_actual);
+              processRole('minutes', row.minutes_original, row.minutes_actual);
+            });
+          }
+          return stats;
+        });
+
+        const activeTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => stat.isActive));
+        const archivedTeacherStats = computed(() => Object.values(allTeacherStats.value).filter(stat => !stat.isActive && stat.total > 0));
+
+        const addTeacher = () => {
+          if (!isAdmin.value) return;
+          const name = newTeacherName.value.trim();
+          if (!name) return;
+          if (!appData.value.teachers) appData.value.teachers = [];
+          
+          const existingTeacher = appData.value.teachers.find(t => t.name === name);
+          if (existingTeacher) {
+            if (!existingTeacher.isActive) {
+               existingTeacher.isActive = true;
+            } else {
+               alert('此成員已在名單中！');
+            }
+          } else {
+            appData.value.teachers.push({ name: name, isActive: true });
+          }
+          newTeacherName.value = '';
+          saveData();
+        };
+
+        const archiveTeacher = (name) => {
+          if (!isAdmin.value) return;
+          if (confirm(`確定要將「${name}」移至封存區嗎？紀錄會保留，但不會再出現於選單中。`)) {
+             const teacher = appData.value.teachers.find(t => t.name === name);
+             if (teacher) {
+                 teacher.isActive = false;
+                 saveData();
+             }
+          }
+        };
+
+        const restoreTeacher = (name) => {
+          if (!isAdmin.value) return;
+          const teacher = appData.value.teachers.find(t => t.name === name);
+          if (teacher) {
+             teacher.isActive = true;
+             saveData();
+          }
+        };
+
+        const startEdit = (name) => {
+          if (!isAdmin.value) return;
+          editingOldName.value = name;
+          editingNewName.value = name;
+        };
+
+        const cancelEdit = () => {
+          editingOldName.value = '';
+          editingNewName.value = '';
+        };
+
+        const saveEdit = () => {
+          if (!isAdmin.value) return;
+          const oldName = editingOldName.value;
+          const newName = editingNewName.value.trim();
+
+          if (!newName || newName === oldName) {
+            cancelEdit();
+            return;
+          }
+
+          if (appData.value.teachers.some(t => t.name === newName)) {
+            alert('此成員名稱已存在，請更換名稱！');
+            return;
+          }
+
+          const teacher = appData.value.teachers.find(t => t.name === oldName);
+          if (teacher) {
+            teacher.name = newName;
+          }
+
+          appData.value.workHistory.forEach(row => {
+            if (row.convener_original === oldName) row.convener_original = newName;
+            if (row.convener_actual === oldName) row.convener_actual = newName;
+            if (row.training_original === oldName) row.training_original = newName;
+            if (row.training_actual === oldName) row.training_actual = newName;
+            if (row.minutes_original === oldName) row.minutes_original = newName;
+            if (row.minutes_actual === oldName) row.minutes_actual = newName;
+          });
+
+          saveData();
+          cancelEdit();
+        };
+
+        const addHistoryRow = () => {
+          if (!isAdmin.value) return;
+          appData.value.workHistory.push({ 
+            semester: '', 
+            convener_original: '', convener_actual: '', 
+            training_original: '', training_actual: '', 
+            minutes_original: '', minutes_actual: '' 
+          });
+          saveData();
+        };
+        const removeHistoryRow = (originalIndex) => {
+          if (!isAdmin.value) return;
+          if (confirm('確定要刪除這筆紀錄嗎？')) { appData.value.workHistory.splice(originalIndex, 1); saveData(); }
+        };
+
+        const addMeetingLink = () => { if(isAdmin.value) { appData.value.meetings.push({ title: '', url: '' }); saveData(); } };
+        const removeMeetingLink = (index) => { if(isAdmin.value) { appData.value.meetings.splice(index, 1); saveData(); } };
+        const addEvalLink = () => { if(isAdmin.value) { appData.value.evaluations.push({ title: '', url: '' }); saveData(); } };
+        const removeEvalLink = (index) => { if(isAdmin.value) { appData.value.evaluations.splice(index, 1); saveData(); } };
+        const addEvalResultLink = () => { if(isAdmin.value) { appData.value.eval_results.push({ title: '', url: '' }); saveData(); } };
+        const removeEvalResultLink = (index) => { if(isAdmin.value) { appData.value.eval_results.splice(index, 1); saveData(); } };
+
+        const loadData = async () => {
+          const localData = localStorage.getItem('mathDeptData');
+          if (localData) {
+            const parsedData = JSON.parse(localData);
+            if (parsedData.workHistory && parsedData.workHistory.length > 0 && parsedData.workHistory[0].convener !== undefined) {
+               parsedData.workHistory = parsedData.workHistory.map(row => {
+                  return {
+                     semester: row.semester || '',
+                     convener_original: row.convener || '', convener_actual: '',
+                     training_original: row.training || '', training_actual: '',
+                     minutes_original: row.minutes || '', minutes_actual: ''
+                  };
+               });
+            }
+            if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
+               parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
+            }
+            if (!parsedData.meetings) parsedData.meetings = [];
+            if (!parsedData.evaluations) parsedData.evaluations = [];
+            if (!parsedData.eval_results) parsedData.eval_results = [];
+            appData.value = parsedData;
+          }
+
+          if (GAS_URL.startsWith('https://script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL);
+              const result = await response.json();
+              if (result.status === 'success' && result.data) {
+                appData.value = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+                localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+                lastSyncTime.value = new Date().toLocaleTimeString();
+                syncStatus.value = 'synced';
+              }
+            } catch (error) {
+              syncStatus.value = 'error';
+            }
+          }
+        };
+
+        const saveData = async () => {
+          localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
+          lastSyncTime.value = new Date().toLocaleTimeString();
+          
+          if (GAS_URL.startsWith('https://script.google.com')) {
+            syncStatus.value = 'syncing';
+            try {
+              const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(appData.value)
+              });
+              const result = await response.json();
+              if (result.status === 'success') syncStatus.value = 'synced';
+              else throw new Error(result.message);
+            } catch (error) {
+              syncStatus.value = 'error';
+            }
+          } else {
+            syncStatus.value = 'synced'; 
+          }
+        };
+
+        const forceSync = () => { if(isAdmin.value) saveData(); };
+
+        const compiledMarkdown = computed(() => {
+          if (!aiOutput.value) return '';
+          return marked.parse(aiOutput.value);
+        });
+
+        const callGeminiAPI = async () => {
+          if (!geminiApiKey.value) { alert('請先輸入 Gemini API Key'); return; }
+          isGenerating.value = true;
+          aiOutput.value = '';
+          
+          let systemPrompt = aiMode.value === 'agenda' ? 
+            `你是一位專業的國小數學領域召集人。請根據使用者提供的議題方向，擬定一份結構清晰的「會議討論大綱」。\n請包含：1. 議題背景說明。 2. 核心問題。 3. 預期的決議方向。\n請使用 Markdown 格式排版。` : 
+            `你是一位專業的國小會議記錄秘書。請將使用者提供的零散筆記，潤飾成正式的「會議決議文」。\n要求：1. 語氣中性。 2. 結構包含「案由」、「討論情形」與「決議事項」。\n請使用 Markdown 格式排版。`;
+            
+          try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey.value}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n使用者輸入：\n" + aiInput.value }] }], 
+                generationConfig: { temperature: 0.4 } 
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                console.error("API 錯誤:", data.error);
+                throw new Error(data.error.message || '未知的 API 錯誤');
+            }
+            
+            if (data.candidates && data.candidates[0].content.parts[0].text) {
+                aiOutput.value = data.candidates[0].content.parts[0].text;
+            } else {
+                aiOutput.value = '無法生成內容，請稍後再試。';
+            }
+          } catch (error) {
+            console.error('Fetch 錯誤:', error);
+            alert('生成失敗，請檢查您的網路狀態，或確認 API Key 是否複製完整。\n錯誤訊息：' + error.message);
+          } finally {
+            isGenerating.value = false;
+          }
+        };
+
+        const copyAiOutput = () => { navigator.clipboard.writeText(aiOutput.value).then(() => alert('已複製到剪貼簿！')); };
+
+        onMounted(() => {
+          checkAuth(); 
+          loadData();
+          const savedKey = localStorage.getItem('gemini_api_key');
+          if (savedKey) geminiApiKey.value = savedKey;
+        });
+
+        watch(geminiApiKey, (newVal) => localStorage.setItem('gemini_api_key', newVal));
+
+        return {
+          isAdmin, showLoginModal, inputPassword, login, logout,
+          currentView, viewTitle, syncStatus, syncStatusText, lastSyncTime,
+          appData, forceSync,
+          newTeacherName, showArchived, showArchivedStats, activeTeachers, archivedTeachers, 
+          addTeacher, archiveTeacher, restoreTeacher,
+          editingOldName, editingNewName, startEdit, cancelEdit, saveEdit,
+          activeTeacherStats, archivedTeacherStats, 
+          sortedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
+          addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink, addEvalResultLink, removeEvalResultLink,
+          saveData,
+          geminiApiKey, aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
         };
       }
     }).mount('#app');
