@@ -62,21 +62,13 @@
       cursor: pointer;
       border-left: 4px solid transparent;
     }
-    .menu-item:hover {
+    .menu-item:hover, .menu-item.active {
       background-color: var(--sidebar-hover);
       color: #fff;
     }
-    .menu-item.active {
-      background-color: var(--sidebar-hover);
-      color: #fff;
-      border-left-color: #3b82f6; /* 亮藍色標記 */
-    }
-    .menu-item.admin-only {
-      color: #fca5a5; /* 微微的紅色/粉色區分管理員功能 */
-    }
-    .menu-item.admin-only.active {
-      border-left-color: #ef4444;
-    }
+    .menu-item.active { border-left-color: #3b82f6; }
+    .menu-item.admin-only { color: #fca5a5; }
+    .menu-item.admin-only.active { border-left-color: #ef4444; }
 
     /* ================= 佈局：右側主內容區 ================= */
     .main-wrapper {
@@ -111,7 +103,6 @@
     .status-locked { background-color: #fee2e2; color: #dc2626; }
     .status-unlocked { background-color: #dcfce7; color: #16a34a; }
 
-    /* 通用按鈕與輸入框 */
     button {
       padding: 6px 14px;
       border: 1px solid transparent;
@@ -183,7 +174,7 @@
       font-size: 0.85rem;
     }
 
-    /* 歷年學期執掌清單 (一學期為一列) */
+    /* 歷年學期執掌清單 */
     .semester-list { display: flex; flex-direction: column; gap: 14px; }
     .semester-row {
       display: grid;
@@ -200,16 +191,6 @@
     .duty-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
     .sub-select-wrap { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
 
-    /* 統計表格 */
-    .stats-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .stats-table th, .stats-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .stats-table th { background: #f8fafc; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
-    .stats-table tbody tr:hover { background-color: #f1f5f9; }
-    .stats-highlight { font-weight: 700; color: var(--primary-color); }
-
     .disabled-action { opacity: 0.6; pointer-events: none; }
 
     /* 分頁顯示控制 */
@@ -223,15 +204,79 @@
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
+
+    /* ================= 新增：統計規則與個人卡片區塊設計 ================= */
+    .rules-box {
+      background-color: #f8fafc;
+      border-left: 4px solid var(--primary-color);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .rules-box ul { margin-top: 8px; padding-left: 24px; }
+    .rules-box li { margin-bottom: 4px; }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+      border-color: #bfdbfe;
+    }
+    .stat-card-header {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px dashed #e2e8f0;
+      padding-bottom: 10px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+    .stat-total {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      color: var(--primary-color);
+      font-size: 1.05rem;
+      background: #eff6ff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: auto; /* 將總計推到底部 */
+    }
   </style>
 </head>
 <body>
 
 <!-- 左側欄位 -->
 <aside class="sidebar">
-  <div class="sidebar-header">
-    📐 數學領域系統
-  </div>
+  <div class="sidebar-header">📐 數學領域系統</div>
   <nav class="sidebar-menu">
     <a class="menu-item active" onclick="switchTab('tab-duties', this)">歷年工作執掌與統計</a>
     <a class="menu-item" onclick="switchTab('tab-meetings', this)">歷年會議記錄</a>
@@ -239,7 +284,6 @@
     <a class="menu-item" onclick="switchTab('tab-results', this)">歷年評鑑結果</a>
     <a class="menu-item" onclick="switchTab('tab-materials', this)">數學領域相關資料</a>
     
-    <!-- 預設隱藏，只有管理者解鎖後才會顯示 -->
     <a class="menu-item admin-only" id="menuAiRecords" onclick="switchTab('tab-ai', this)" style="display: none;">
       🔒 人工智慧會議記錄
     </a>
@@ -250,7 +294,7 @@
 <main class="main-wrapper">
   <div class="container">
     
-    <!-- 頁面標頭與管理者驗證 (固定在右側上方) -->
+    <!-- 頁面標頭 -->
     <header>
       <h1 id="pageTitle">歷年工作執掌分配與次數統計</h1>
       <div class="admin-bar">
@@ -263,7 +307,6 @@
       </div>
     </header>
 
-    <!-- 【分頁1】歷年工作執掌與統計 (原本的主功能) -->
     <div id="tab-duties" class="tab-content active">
       <!-- 區塊 1：領域教師名單管理 -->
       <section class="section-card">
@@ -306,99 +349,53 @@
         </div>
       </section>
 
-      <!-- 區塊 3：歷年工作執掌次數統計 -->
+      <!-- 區塊 3：歷年工作執掌次數統計 (升級為卡片與規則區塊) -->
       <section class="section-card">
-        <div class="section-header">
-          <span class="section-title">📊 現任領域教師歷年工作次數統計</span>
-          <span style="font-size:0.8rem; color:var(--text-muted);">依據代理實質工作規則自動累計</span>
+        <div class="section-header" style="flex-direction: column; align-items: flex-start; border-bottom: none; padding-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+            <span class="section-title">📊 現任領域教師歷年工作次數統計</span>
+          </div>
+          
+          <!-- 統計規則說明區塊 -->
+          <div class="rules-box">
+            <strong>💡 統計核心精神：只顯示「現任教師」，且「誰實際做事，就算誰的」。</strong>
+            <ul>
+              <li><strong>代理優先：</strong>若原負責人與代理人皆為「現任領域教師」，工作次數歸實際執行的「代理人」。</li>
+              <li><strong>原主承擔：</strong>若代理人已離開領域（非現任），次數算回「原負責人」頭上。</li>
+              <li><strong>暫時隱藏：</strong>若兩人都已離開領域，這筆次數暫不顯示（紀錄會保留，未來有人回任即會重新出現）。</li>
+            </ul>
+          </div>
         </div>
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>現任教師姓名</th>
-              <th>召集人 (次)</th>
-              <th>參加研習 (次)</th>
-              <th>會議記錄 (次)</th>
-              <th>總計 (次)</th>
-            </tr>
-          </thead>
-          <tbody id="statsTableBody">
-            <!-- 統計數據由 JS 即時計算生成 -->
-          </tbody>
-        </table>
+        
+        <!-- 個人專屬卡片區塊 -->
+        <div class="stats-grid" id="statsContainer">
+          <!-- 卡片由 JS 即時計算生成 -->
+        </div>
       </section>
     </div>
 
-    <!-- 【其他分頁】擴充區塊 (預留版面) -->
-    <div id="tab-meetings" class="tab-content">
-      <div class="placeholder-content">
-        <h2>歷年會議記錄</h2>
-        <p>此區塊功能建置中，未來可在此上傳或瀏覽各學期會議記錄文件。</p>
-      </div>
-    </div>
-    
-    <div id="tab-plans" class="tab-content">
-      <div class="placeholder-content">
-        <h2>歷年評鑑計劃</h2>
-        <p>此區塊功能建置中，將顯示歷年評鑑計劃相關檔案。</p>
-      </div>
-    </div>
-
-    <div id="tab-results" class="tab-content">
-      <div class="placeholder-content">
-        <h2>歷年評鑑結果</h2>
-        <p>此區塊功能建置中，將顯示歷年評鑑結果相關資料。</p>
-      </div>
-    </div>
-
-    <div id="tab-materials" class="tab-content">
-      <div class="placeholder-content">
-        <h2>數學領域相關資料</h2>
-        <p>此區塊功能建置中，可作為領域內教材、教案的共用雲端空間。</p>
-      </div>
-    </div>
-
-    <div id="tab-ai" class="tab-content">
-      <div class="placeholder-content" style="border: 2px dashed #ef4444;">
-        <h2 style="color: #ef4444;">🔒 人工智慧會議記錄 (管理者專區)</h2>
-        <p>此區塊為機密資料，僅有解鎖編輯模式的管理者可以看見與操作。</p>
-      </div>
-    </div>
+    <!-- 其他預留分頁 -->
+    <div id="tab-meetings" class="tab-content"><div class="placeholder-content"><h2>歷年會議記錄</h2><p>建置中...</p></div></div>
+    <div id="tab-plans" class="tab-content"><div class="placeholder-content"><h2>歷年評鑑計劃</h2><p>建置中...</p></div></div>
+    <div id="tab-results" class="tab-content"><div class="placeholder-content"><h2>歷年評鑑結果</h2><p>建置中...</p></div></div>
+    <div id="tab-materials" class="tab-content"><div class="placeholder-content"><h2>數學領域相關資料</h2><p>建置中...</p></div></div>
+    <div id="tab-ai" class="tab-content"><div class="placeholder-content" style="border: 2px dashed #ef4444;"><h2 style="color: #ef4444;">🔒 人工智慧會議記錄 (管理者專區)</h2><p>機密資料建置中...</p></div></div>
 
   </div>
 </main>
 
 <script>
-  // ==========================================
   // 分頁切換功能
-  // ==========================================
   function switchTab(tabId, element) {
-    // 隱藏所有分頁
-    document.querySelectorAll('.tab-content').forEach(tab => {
-      tab.classList.remove('active');
-    });
-    // 移除選單的 active 狀態
-    document.querySelectorAll('.menu-item').forEach(item => {
-      item.classList.remove('active');
-    });
-
-    // 顯示指定分頁
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    // 設定當前點擊的選單為 active
     element.classList.add('active');
-    
-    // 更新右側頂部標題
     document.getElementById('pageTitle').textContent = element.textContent.replace('🔒', '').trim();
   }
 
-
-  // ==========================================
-  // 原有系統核心邏輯與資料
-  // ==========================================
-  const SEMESTER_PALETTE = [
-    '#eff6ff', '#fdf2f8', '#f0fdf4', '#fefce8', 
-    '#faf5ff', '#fff7ed', '#f0fdfa', '#f5f3ff'
-  ];
+  // 核心資料
+  const SEMESTER_PALETTE = ['#eff6ff', '#fdf2f8', '#f0fdf4', '#fefce8', '#faf5ff', '#fff7ed', '#f0fdfa', '#f5f3ff'];
 
   let state = {
     isAdmin: false,
@@ -426,9 +423,7 @@
 
   const ROLES = ["召集人", "參加研習", "會議記錄"];
 
-  window.onload = () => {
-    renderAll();
-  };
+  window.onload = () => renderAll();
 
   function renderAll() {
     renderTeacherManagement();
@@ -437,28 +432,19 @@
     updateAdminUI();
   }
 
-  // ==========================================
-  // 管理者權限機制 (包含左側選單控制)
-  // ==========================================
   function handleLogin() {
     const pwd = document.getElementById('adminPwdInput').value;
     if (pwd === "admin_password_123" || pwd === "1234") {
       state.isAdmin = true;
       document.getElementById('adminPwdInput').value = '';
       renderAll();
-    } else {
-      alert("密碼錯誤！");
-    }
+    } else alert("密碼錯誤！");
   }
 
   function handleLogout() {
     state.isAdmin = false;
-    
-    // 若管理者退出時剛好停留在 AI 分頁，則自動切回首頁
     const aiTab = document.getElementById('tab-ai');
-    if(aiTab.classList.contains('active')){
-       switchTab('tab-duties', document.querySelector('.menu-item')); 
-    }
+    if(aiTab.classList.contains('active')) switchTab('tab-duties', document.querySelector('.menu-item')); 
     renderAll();
   }
 
@@ -466,11 +452,8 @@
     const badge = document.getElementById('adminBadge');
     const loginArea = document.getElementById('loginArea');
     const logoutBtn = document.getElementById('logoutBtn');
-    
     const teacherControl = document.getElementById('teacherAdminControl');
     const semesterControl = document.getElementById('semesterAdminControl');
-    
-    // 【新增】控制左側的「人工智慧會議記錄」選單
     const menuAiRecords = document.getElementById('menuAiRecords');
 
     if (state.isAdmin) {
@@ -478,27 +461,20 @@
       badge.className = "status-badge status-unlocked";
       loginArea.style.display = "none";
       logoutBtn.style.display = "inline-block";
-
       teacherControl.classList.remove('disabled-action');
       semesterControl.classList.remove('disabled-action');
-      
-      // 顯示專屬選單
       menuAiRecords.style.display = "flex";
     } else {
       badge.textContent = "🔒 唯讀檢視模式";
       badge.className = "status-badge status-locked";
       loginArea.style.display = "flex";
       logoutBtn.style.display = "none";
-
       teacherControl.classList.add('disabled-action');
       semesterControl.classList.add('disabled-action');
-      
-      // 隱藏專屬選單
       menuAiRecords.style.display = "none";
     }
   }
 
-  // 以下為原本的渲染與計算邏輯 (完全保留)
   function renderTeacherManagement() {
     const currentList = document.getElementById('currentTeachersList');
     const formerList = document.getElementById('formerTeachersList');
@@ -523,11 +499,10 @@
   }
 
   function addTeacher() {
-    const nameInput = document.getElementById('newTeacherName');
-    const name = nameInput.value.trim();
+    const name = document.getElementById('newTeacherName').value.trim();
     if (!name) return alert("請輸入教師姓名");
     state.teachers.push({ id: 't_' + Date.now(), name: name, isCurrent: true });
-    nameInput.value = '';
+    document.getElementById('newTeacherName').value = '';
     renderAll();
   }
 
@@ -539,7 +514,6 @@
   function renderSemesters() {
     const container = document.getElementById('semesterContainer');
     container.innerHTML = '';
-
     state.semesters.forEach(sem => {
       const row = document.createElement('div');
       row.className = 'semester-row';
@@ -596,14 +570,20 @@
     state.duties[key].substitute = val; calculateAndRenderStats();
   }
 
+  // ==========================================
+  // 更新為「個人區塊(卡片)」的統計渲染邏輯
+  // ==========================================
   function calculateAndRenderStats() {
     const teacherMap = {};
     state.teachers.forEach(t => { teacherMap[t.id] = t; });
     const stats = {};
+    
+    // 初始化現任教師
     state.teachers.filter(t => t.isCurrent).forEach(t => {
       stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 };
     });
 
+    // 統計計算
     state.semesters.forEach(sem => {
       ROLES.forEach(role => {
         const key = `${sem.id}_${role}`;
@@ -628,18 +608,27 @@
       });
     });
 
-    const tbody = document.getElementById('statsTableBody');
-    tbody.innerHTML = '';
+    const container = document.getElementById('statsContainer');
+    container.innerHTML = '';
     const currentList = state.teachers.filter(t => t.isCurrent);
-    if (currentList.length === 0) return tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">目前無現任教師</td></tr>`;
     
+    if (currentList.length === 0) {
+      container.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding: 30px; color:var(--text-muted);">目前無現任教師資料</div>`;
+      return;
+    }
+    
+    // 渲染每一張教師卡片
     currentList.forEach(t => {
       const data = stats[t.id];
-      tbody.innerHTML += `<tr>
-        <td><strong>${data.name}</strong></td>
-        <td>${data["召集人"]}</td><td>${data["參加研習"]}</td><td>${data["會議記錄"]}</td>
-        <td class="stats-highlight">${data.total}</td>
-      </tr>`;
+      container.innerHTML += `
+        <div class="stat-card">
+          <div class="stat-card-header">🧑‍🏫 ${data.name}</div>
+          <div class="stat-item"><span>召集人</span><span>${data["召集人"]} 次</span></div>
+          <div class="stat-item"><span>參加研習</span><span>${data["參加研習"]} 次</span></div>
+          <div class="stat-item"><span>會議記錄</span><span>${data["會議記錄"]} 次</span></div>
+          <div class="stat-total"><span>總計</span><span>${data.total} 次</span></div>
+        </div>
+      `;
     });
   }
 </script>
