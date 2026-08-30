@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -356,12 +355,12 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="連結名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeMeetingLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                     <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
                        點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                     </a>
                     <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -384,12 +383,12 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="資料名稱" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-purple-500 focus:border-purple-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-purple-500 hover:text-purple-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeEvalLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                      <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
+                     <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
                         點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                      </a>
                      <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -412,12 +411,12 @@
                   <template v-if="isAdmin">
                     <input v-model="link.title" @change="saveData" placeholder="資料名稱 (如: 112年評鑑審查結果)" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
                     <input v-model="link.url" @change="saveData" placeholder="Google Drive 連結網址" class="flex-1 border-gray-300 rounded p-2 text-sm focus:ring-teal-500 focus:border-teal-500">
-                    <a v-if="link.url" :href="link.url" target="_blank" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-teal-500 hover:text-teal-700" title="開啟連結"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                     <button @click="removeEvalResultLink(index)" class="text-red-500 hover:text-red-700 px-2" title="刪除"><i class="fa-solid fa-xmark"></i></button>
                   </template>
                   <template v-else>
                      <span class="flex-1 text-sm font-medium text-gray-700">{{ link.title || '未命名連結' }}</span>
-                     <a v-if="link.url" :href="link.url" target="_blank" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
+                     <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer" class="text-sm text-teal-600 hover:text-teal-800 underline flex items-center gap-1">
                         點擊前往 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                      </a>
                      <span v-else class="text-sm text-gray-400">尚無網址</span>
@@ -433,9 +432,6 @@
             <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500 flex-1 flex flex-col">
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-medium text-gray-800"><i class="fa-solid fa-robot mr-2 text-purple-500"></i>會議議案 AI 助手</h3>
-                <div class="flex items-center gap-2">
-                  <input v-model="geminiApiKey" type="password" placeholder="請貼上 Gemini API Key" class="border-gray-300 rounded p-1 text-xs focus:ring-purple-500 focus:border-purple-500 w-48 bg-gray-50">
-                </div>
               </div>
               <div class="flex gap-2 mb-4">
                 <button @click="aiMode = 'agenda'" :class="aiMode === 'agenda' ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-50 text-gray-600 border-gray-200'" class="px-4 py-2 rounded-md border text-sm font-medium transition-colors"><i class="fa-solid fa-lightbulb mr-1"></i> 議案發想與大綱</button>
@@ -445,7 +441,7 @@
                 <div class="w-1/2 flex flex-col">
                   <label class="block text-sm font-medium text-gray-700 mb-1">{{ aiMode === 'agenda' ? '請簡述您想討論的議題方向：' : '請貼上會議中的草稿或零散筆記：' }}</label>
                   <textarea v-model="aiInput" class="w-full flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 resize-none" :placeholder="aiMode === 'agenda' ? '例如：我想討論下學期五年級數學銜接教材的選用...' : '例如：大家同意銜接教材用南一版...'"></textarea>
-                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput || !geminiApiKey" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
+                  <button @click="callGeminiAPI" :disabled="isGenerating || !aiInput" class="mt-4 w-full py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium disabled:bg-purple-300 flex justify-center items-center">
                     <i v-if="isGenerating" class="fa-solid fa-circle-notch fa-spin mr-2"></i>{{ isGenerating ? 'AI 正在思考中...' : (aiMode === 'agenda' ? '生成討論大綱' : '生成正式會議紀錄') }}
                   </button>
                 </div>
@@ -469,38 +465,53 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+    const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
         const isAdmin = ref(false);
         const showLoginModal = ref(false);
         const inputPassword = ref('');
-        const ADMIN_PASSWORD = 'math123'; 
 
-        const login = () => {
-          if (inputPassword.value === ADMIN_PASSWORD) {
-            isAdmin.value = true;
-            showLoginModal.value = false;
-            inputPassword.value = '';
-            sessionStorage.setItem('mathAdminAuth', 'true');
-          } else {
-            alert('密碼錯誤！');
-            inputPassword.value = '';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHvyp-20JfO9asfARNxCrcdJqHSrtN1fsp7g5Gk8VkIaUDyiyx95UgvXFdh7W9UaGTA/exec'; 
+
+        const login = async () => {
+          if (!inputPassword.value) {
+            alert('請輸入密碼！');
+            return;
+          }
+          
+          try {
+            const response = await fetch(GAS_URL, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'verifyAdmin', password: inputPassword.value })
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+              isAdmin.value = true;
+              showLoginModal.value = false;
+              inputPassword.value = '';
+              sessionStorage.setItem('mathAdminAuth', result.token);
+            } else {
+              alert(result.message || '密碼錯誤！');
+              inputPassword.value = '';
+            }
+          } catch (error) {
+            alert('登入驗證連線失敗');
           }
         };
 
         const logout = () => {
           isAdmin.value = false;
           sessionStorage.removeItem('mathAdminAuth');
-          // 登出時若在 AI 畫面，自動切回首頁
           if (currentView.value === 'ai_assistant') {
             currentView.value = 'history'; 
           }
         };
 
         const checkAuth = () => {
-          if (sessionStorage.getItem('mathAdminAuth') === 'true') {
+          if (sessionStorage.getItem('mathAdminAuth')) {
             isAdmin.value = true;
           }
         };
@@ -508,7 +519,6 @@
         const currentView = ref('history');
         const syncStatus = ref('synced'); 
         const lastSyncTime = ref('尚未同步');
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHvyp-20JfO9asfARNxCrcdJqHSrtN1fsp7g5Gk8VkIaUDyiyx95UgvXFdh7W9UaGTA/exec'; 
         
         const newTeacherName = ref('');
         const showArchived = ref(false);
@@ -517,7 +527,6 @@
         const editingOldName = ref('');
         const editingNewName = ref('');
 
-        const geminiApiKey = ref('');
         const aiMode = ref('agenda');
         const aiInput = ref('');
         const aiOutput = ref('');
@@ -554,7 +563,6 @@
           eval_results: []
         });
 
-        // 智慧解析年份與學期來進行絕對排序 (由大到小)
         const sortedWorkHistory = computed(() => {
           if (!appData.value.workHistory) return [];
           
@@ -563,31 +571,20 @@
             originalIndex: index
           })).sort((a, b) => {
             const parseSemester = (str) => {
-              // 若為空白 (新增的列)，給予極大值讓它保證置頂
               if (!str || !str.trim()) return { year: 9999, term: 9999 }; 
-              
-              // 擷取連續數字作為年份 (如 "112學年" -> 112)
               const yMatch = str.match(/\d+/);
               const year = yMatch ? parseInt(yMatch[0], 10) : -1;
-              
-              // 判定上下學期 (下學期權重設為 2，上學期為 1)
               let term = 0;
               if (str.includes('下')) term = 2;
               else if (str.includes('上')) term = 1;
-              
               return { year, term };
             };
             
             const pA = parseSemester(a.row.semester);
             const pB = parseSemester(b.row.semester);
             
-            // 1. 先比年份 (年份大的排上面)
             if (pA.year !== pB.year) return pB.year - pA.year; 
-            
-            // 2. 年份相同比學期 (下學期=2 > 上學期=1)
             if (pA.term !== pB.term) return pB.term - pA.term; 
-            
-            // 3. 完全相同，或是都無法解析，則依照原本順序(新的在上面)
             return b.originalIndex - a.originalIndex;
           });
         });
@@ -623,7 +620,6 @@
 
         const allTeacherStats = computed(() => {
           const stats = {};
-          
           const isActiveTeacher = (name) => {
             const t = appData.value.teachers.find(teacher => teacher.name === name);
             return t ? t.isActive : false;
@@ -779,36 +775,21 @@
         const loadData = async () => {
           const localData = localStorage.getItem('mathDeptData');
           if (localData) {
-            const parsedData = JSON.parse(localData);
-            if (parsedData.workHistory && parsedData.workHistory.length > 0 && parsedData.workHistory[0].convener !== undefined) {
-               parsedData.workHistory = parsedData.workHistory.map(row => {
-                  return {
-                     semester: row.semester || '',
-                     convener_original: row.convener || '', convener_actual: '',
-                     training_original: row.training || '', training_actual: '',
-                     minutes_original: row.minutes || '', minutes_actual: ''
-                  };
-               });
-            }
-            if (parsedData.teachers && typeof parsedData.teachers[0] === 'string') {
-               parsedData.teachers = parsedData.teachers.map(t => ({ name: t, isActive: true }));
-            }
-            if (!parsedData.meetings) parsedData.meetings = [];
-            if (!parsedData.evaluations) parsedData.evaluations = [];
-            if (!parsedData.eval_results) parsedData.eval_results = [];
-            appData.value = parsedData;
+            appData.value = JSON.parse(localData);
           }
 
-          if (GAS_URL.startsWith('https://script.google.com')) {
+          if (GAS_URL) {
             syncStatus.value = 'syncing';
             try {
-              const response = await fetch(GAS_URL);
+              const response = await fetch(`${GAS_URL}?action=getData`);
               const result = await response.json();
-              if (result.status === 'success' && result.data) {
-                appData.value = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+              if (result.status === 'success' && result.data && Object.keys(result.data).length > 0) {
+                appData.value = result.data;
                 localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
                 lastSyncTime.value = new Date().toLocaleTimeString();
                 syncStatus.value = 'synced';
+              } else {
+                 syncStatus.value = 'synced';
               }
             } catch (error) {
               syncStatus.value = 'error';
@@ -820,17 +801,23 @@
           localStorage.setItem('mathDeptData', JSON.stringify(appData.value));
           lastSyncTime.value = new Date().toLocaleTimeString();
           
-          if (GAS_URL.startsWith('https://script.google.com')) {
+          if (GAS_URL && isAdmin.value) {
             syncStatus.value = 'syncing';
             try {
               const response = await fetch(GAS_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(appData.value)
+                body: JSON.stringify({ 
+                  action: 'saveData', 
+                  data: appData.value,
+                  token: sessionStorage.getItem('mathAdminAuth')
+                })
               });
               const result = await response.json();
-              if (result.status === 'success') syncStatus.value = 'synced';
-              else throw new Error(result.message);
+              if (result.status === 'success') {
+                syncStatus.value = 'synced';
+              } else {
+                throw new Error(result.message);
+              }
             } catch (error) {
               syncStatus.value = 'error';
             }
@@ -847,39 +834,29 @@
         });
 
         const callGeminiAPI = async () => {
-          if (!geminiApiKey.value) { alert('請先輸入 Gemini API Key'); return; }
+          if (!aiInput.value.trim()) return;
           isGenerating.value = true;
           aiOutput.value = '';
           
-          let systemPrompt = aiMode.value === 'agenda' ? 
-            `你是一位專業的國小數學領域召集人。請根據使用者提供的議題方向，擬定一份結構清晰的「會議討論大綱」。\n請包含：1. 議題背景說明。 2. 核心問題。 3. 預期的決議方向。\n請使用 Markdown 格式排版。` : 
-            `你是一位專業的國小會議記錄秘書。請將使用者提供的零散筆記，潤飾成正式的「會議決議文」。\n要求：1. 語氣中性。 2. 結構包含「案由」、「討論情形」與「決議事項」。\n請使用 Markdown 格式排版。`;
-            
           try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey.value}`, {
+            const response = await fetch(GAS_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n使用者輸入：\n" + aiInput.value }] }], 
-                generationConfig: { temperature: 0.4 } 
+                action: 'askAI', 
+                mode: aiMode.value, 
+                prompt: aiInput.value 
               })
             });
+            const result = await response.json();
             
-            const data = await response.json();
-            
-            if (data.error) {
-                console.error("API 錯誤:", data.error);
-                throw new Error(data.error.message || '未知的 API 錯誤');
-            }
-            
-            if (data.candidates && data.candidates[0].content.parts[0].text) {
-                aiOutput.value = data.candidates[0].content.parts[0].text;
+            if (result.status === 'success') {
+                aiOutput.value = result.data;
             } else {
-                aiOutput.value = '無法生成內容，請稍後再試。';
+                throw new Error(result.message || '未知的 API 錯誤');
             }
           } catch (error) {
             console.error('Fetch 錯誤:', error);
-            alert('生成失敗，請檢查您的網路狀態，或確認 API Key 是否複製完整。\n錯誤訊息：' + error.message);
+            alert('生成失敗，請檢查網路狀態或後端設定。\n錯誤訊息：' + error.message);
           } finally {
             isGenerating.value = false;
           }
@@ -890,11 +867,7 @@
         onMounted(() => {
           checkAuth(); 
           loadData();
-          const savedKey = localStorage.getItem('gemini_api_key');
-          if (savedKey) geminiApiKey.value = savedKey;
         });
-
-        watch(geminiApiKey, (newVal) => localStorage.setItem('gemini_api_key', newVal));
 
         return {
           isAdmin, showLoginModal, inputPassword, login, logout,
@@ -907,7 +880,7 @@
           sortedWorkHistory, getYearColorClass, addHistoryRow, removeHistoryRow,
           addMeetingLink, removeMeetingLink, addEvalLink, removeEvalLink, addEvalResultLink, removeEvalResultLink,
           saveData,
-          geminiApiKey, aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
+          aiMode, aiInput, aiOutput, isGenerating, compiledMarkdown, callGeminiAPI, copyAiOutput
         };
       }
     }).mount('#app');
