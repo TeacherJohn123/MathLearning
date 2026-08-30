@@ -1,96 +1,203 @@
-// ==========================================
-// 全域變數與設定
-// ==========================================
-const FILE_NAME = "math_learning_data.json"; // 儲存的 JSON 檔案名稱[span_0](start_span)[span_0](end_span)
-const ADMIN_PASSWORD = "admin_password_123"; // 網頁管理員登入密碼 (請自行修改)[span_1](start_span)[span_1](end_span)
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>數學領域工作資料</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+    .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; }
+    .sidebar h3 { margin-top: 0; border-bottom: 1px solid #455a64; padding-bottom: 10px; }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar ul li { margin-bottom: 15px; }
+    .sidebar ul li a { color: #ecf0f1; text-decoration: none; display: block; }
+    .sidebar ul li a:hover { color: #3498db; }
+    .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #ecf0f1; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #2980b9; }
+    .data-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+  </style>
+</head>
+<body>
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
-      .setTitle('數學領域工作資料')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
-
-// ==========================================
-// 核心機制：排隊鎖定、讀取、合併、寫入
-// ==========================================
-function submitRecord(newRecord) {
-  // 啟用「排隊鎖定閘門 (LockService)」[span_2](start_span)[span_2](end_span)
-  const lock = LockService.getScriptLock();[span_3](start_span)[span_3](end_span)
-  
-  // 嘗試取得鎖定，最多等待 10 秒[span_4](start_span)[span_4](end_span)
-  if (!lock.tryLock(10000)) {[span_5](start_span)[span_5](end_span)
-    throw new Error("系統正忙（排隊人數過多），請稍後再試。");[span_6](start_span)[span_6](end_span)
-  }
-
-  try {
-    // 讀取最新 ➔ 合併 ➔ 寫入 ➔ 換下一個[span_7](start_span)[span_7](end_span)
-    const file = getOrCreateJsonFile();[span_8](start_span)[span_8](end_span)
-    const fileContent = file.getBlob().getDataAsString();[span_9](start_span)[span_9](end_span)
+  <!-- 左側欄：根據身分切換顯示內容 -->
+  <div class="sidebar">
+    <h3>導覽選單</h3>
     
-    let data = [];
-    if (fileContent) {
-      data = JSON.parse(fileContent);[span_10](start_span)[span_10](end_span)
+    <!-- 一般使用者選單 -->
+    <ul id="userMenu">
+      <li><a href="#">歷年工作職位</a></li>
+      <li><a href="#" target="_blank">歷年領域會議（雲端連結）</a></li>
+      <li><a href="#" target="_blank">歷年評鑑計劃（雲端連結）</a></li>
+      <li><a href="#" target="_blank">歷年評鑑結果（雲端連結）</a></li>
+    </ul>
+
+    <!-- 管理員專屬選單 (預設隱藏) -->
+    <ul id="adminMenu" style="display: none;">
+      <li><a href="#">歷年工作職位 (編輯模式)</a></li>
+      <li><a href="#">歷年領域會議 (編輯模式)</a></li>
+      <li><a href="#">歷年評鑑計劃 (編輯模式)</a></li>
+      <li><a href="#">歷年評鑑結果 (編輯模式)</a></li>
+      <li><a href="#" style="color: #f1c40f; font-weight: bold;">AI會議助理</a></li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <h2>數學領域工作資料</h2>
+    
+    <!-- 資料提交區 (單筆 Delta 傳送) -->
+    <div class="card" id="submissionArea">
+      <h3>新增工作紀錄</h3>
+      <div class="form-group">
+        <label>項目名稱 / 標題:</label>
+        <input type="text" id="recordTitle" placeholder="輸入資料標題">
+      </div>
+      <div class="form-group">
+        <label>內容說明:</label>
+        <input type="text" id="recordContent" placeholder="輸入內容">
+      </div>
+      <button onclick="submitData()">送出單筆資料</button>
+      <span id="submitStatus" style="margin-left: 10px;"></span>
+    </div>
+
+    <!-- 管理員登入與編輯區 -->
+    <div class="card">
+      <h3 id="adminSectionTitle">管理員登入</h3>
+      <div id="loginArea">
+        <div class="form-group">
+          <label>請輸入管理員密碼:</label>
+          <input type="password" id="adminPassword" placeholder="輸入密碼">
+        </div>
+        <button onclick="loginAdmin()">登入管理後台</button>
+        <span id="loginStatus" style="margin-left: 10px;"></span>
+      </div>
+
+      <div id="adminDataArea" style="display: none; margin-top: 20px;">
+        <button onclick="loadAdminData()" style="background: #27ae60;">🔄 重新載入雲端資料</button>
+        <div id="dataList" style="margin-top: 15px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. 前端只傳送「單筆新資料 (Delta)」[span_40](start_span)[span_40](end_span)
+    function submitData() {
+      const title = document.getElementById('recordTitle').value;
+      const content = document.getElementById('recordContent').value;
+      const statusLabel = document.getElementById('submitStatus');
+
+      if (!title || !content) {
+        statusLabel.innerText = "請填寫完整資訊！";
+        statusLabel.style.color = "red";
+        return;
+      }
+
+      statusLabel.innerText = "資料傳送中...請稍後";
+      statusLabel.style.color = "#333";
+
+      // 僅將此單筆記錄打包[span_41](start_span)[span_41](end_span)
+      const deltaRecord = { title: title, content: content };
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res.success) {
+            statusLabel.innerText = res.message;[span_42](start_span)[span_42](end_span)
+            statusLabel.style.color = "green";
+            document.getElementById('recordTitle').value = '';[span_43](start_span)[span_43](end_span)
+            document.getElementById('recordContent').value = '';[span_44](start_span)[span_44](end_span)
+          } else {
+            statusLabel.innerText = "錯誤: " + res.error;[span_45](start_span)[span_45](end_span)
+            statusLabel.style.color = "red";
+          }
+        })
+        .submitRecord(deltaRecord);
     }
 
-    // 為新資料加上時間戳記與唯一 ID[span_11](start_span)[span_11](end_span)
-    newRecord.id = Utilities.getUuid();[span_12](start_span)[span_12](end_span)
-    newRecord.timestamp = new Date().toISOString();[span_13](start_span)[span_13](end_span)
+    // ==========================================
+    // 管理員登入與編輯功能
+    // ==========================================
+    let currentPassword = "";
 
-    // 合併與寫入[span_14](start_span)[span_14](end_span)
-    data.push(newRecord);[span_15](start_span)[span_15](end_span)
-    file.setContent(JSON.stringify(data));[span_16](start_span)[span_16](end_span)
-    
-    return { success: true, message: "資料新增成功！" };[span_17](start_span)[span_17](end_span)
-  } catch (e) {
-    return { success: false, error: e.message };[span_18](start_span)[span_18](end_span)
-  } finally {
-    // 確保最終一定會解開鎖定[span_19](start_span)[span_19](end_span)
-    lock.releaseLock();[span_20](start_span)[span_20](end_span)
-  }
-}
-
-function getOrCreateJsonFile() {
-  const files = DriveApp.getFilesByName(FILE_NAME);[span_21](start_span)[span_21](end_span)
-  if (files.hasNext()) {
-    return files.next();[span_22](start_span)[span_22](end_span)
-  } else {
-    return DriveApp.createFile(FILE_NAME, "[]", MimeType.PLAIN_TEXT);[span_23](start_span)[span_23](end_span)
-  }
-}
-
-// ==========================================
-// 管理員專用功能
-// ==========================================
-function verifyAdmin(password) {
-  return password === ADMIN_PASSWORD;[span_24](start_span)[span_24](end_span)
-}
-
-function getAdminData(password) {
-  if (!verifyAdmin(password)) throw new Error("密碼錯誤，拒絕存取。");[span_25](start_span)[span_25](end_span)
-  const file = getOrCreateJsonFile();[span_26](start_span)[span_26](end_span)
-  const fileContent = file.getBlob().getDataAsString();[span_27](start_span)[span_27](end_span)
-  return JSON.parse(fileContent || "[]");[span_28](start_span)[span_28](end_span)
-}
-
-function updateRecord(password, updatedRecord) {
-  if (!verifyAdmin(password)) throw new Error("密碼錯誤，拒絕存取。");[span_29](start_span)[span_29](end_span)
-  
-  const lock = LockService.getScriptLock();[span_30](start_span)[span_30](end_span)
-  if (!lock.tryLock(10000)) throw new Error("系統正忙，請稍後再試。");[span_31](start_span)[span_31](end_span)
-
-  try {
-    const file = getOrCreateJsonFile();[span_32](start_span)[span_32](end_span)
-    let data = JSON.parse(file.getBlob().getDataAsString() || "[]");[span_33](start_span)[span_33](end_span)
-    
-    const index = data.findIndex(row => row.id === updatedRecord.id);[span_34](start_span)[span_34](end_span)
-    if (index !== -1) {
-      data[index] = updatedRecord;[span_35](start_span)[span_35](end_span)
-      file.setContent(JSON.stringify(data));[span_36](start_span)[span_36](end_span)
-      return { success: true, message: "資料更新成功！" };[span_37](start_span)[span_37](end_span)
-    } else {
-      return { success: false, error: "找不到該筆資料 ID" };[span_38](start_span)[span_38](end_span)
+    function loginAdmin() {
+      const pwd = document.getElementById('adminPassword').value;
+      const statusLabel = document.getElementById('loginStatus');
+      statusLabel.innerText = "驗證中...";
+      
+      google.script.run
+        .withSuccessHandler(data => {
+          currentPassword = pwd;
+          // 切換介面與左側欄
+          document.getElementById('loginArea').style.display = "none";
+          document.getElementById('adminSectionTitle').innerText = "資料編輯後台";
+          document.getElementById('adminDataArea').style.display = "block";
+          
+          document.getElementById('userMenu').style.display = "none";
+          document.getElementById('adminMenu').style.display = "block";
+          
+          renderDataList(data);[span_46](start_span)[span_46](end_span)
+        })
+        .withFailureHandler(err => {
+          statusLabel.innerText = "登入失敗：" + err.message;[span_47](start_span)[span_47](end_span)
+          statusLabel.style.color = "red";
+        })
+        .getAdminData(pwd);[span_48](start_span)[span_48](end_span)
     }
-  } finally {
-    lock.releaseLock();[span_39](start_span)[span_39](end_span)
-  }
-}
+
+    function loadAdminData() {
+      google.script.run
+        .withSuccessHandler(renderDataList)[span_49](start_span)[span_49](end_span)
+        .getAdminData(currentPassword);[span_50](start_span)[span_50](end_span)
+    }
+
+    function renderDataList(data) {
+      const container = document.getElementById('dataList');
+      container.innerHTML = "";
+      
+      if (data.length === 0) {
+        container.innerHTML = "<p>雲端硬碟中目前沒有資料。</p>";
+        return;
+      }
+
+      // 渲染所有雲端資料，並提供編輯輸入框[span_51](start_span)[span_51](end_span)
+      data.forEach(item => {
+        const div = document.createElement('div');
+        div.className = "data-item";
+        div.innerHTML = `
+          <strong>標題:</strong> <input type="text" id="title_${item.id}" value="${item.title}"><br><br>
+          <strong>內容:</strong> <input type="text" id="content_${item.id}" value="${item.content}"><br>
+          <small style="color:#7f8c8d; display:block; margin-top:5px;">時間: ${item.timestamp}</small>
+          <button onclick="saveEdit('${item.id}')" style="margin-top:10px; padding: 5px 10px; font-size: 12px;">儲存修改</button>
+          <span id="msg_${item.id}" style="margin-left: 10px; font-size: 14px;"></span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function saveEdit(id) {
+      const msgSpan = document.getElementById(`msg_${id}`);
+      msgSpan.innerText = "儲存中...";
+      
+      const updatedRecord = {
+        id: id,[span_52](start_span)[span_52](end_span)
+        title: document.getElementById(`title_${id}`).value,
+        content: document.getElementById(`content_${id}`).value,
+        timestamp: new Date().toISOString()[span_53](start_span)[span_53](end_span)
+      };
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if(res.success) {
+            msgSpan.innerText = "已更新至 Google Drive!";
+            msgSpan.style.color = "green";
+          }
+        })
+        .withFailureHandler(err => {
+          msgSpan.innerText = "失敗: " + err.message;[span_54](start_span)[span_54](end_span)
+        })
+        .updateRecord(currentPassword, updatedRecord);[span_55](start_span)[span_55](end_span)
+    }
+  </script>
+</body>
+</html>
