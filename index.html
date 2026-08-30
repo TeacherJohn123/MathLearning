@@ -1,203 +1,637 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-  <base target="_top">
-  <title>數學領域工作資料</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數學領域 - 學習資料管理系統</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
-    .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; }
-    .sidebar h3 { margin-top: 0; border-bottom: 1px solid #455a64; padding-bottom: 10px; }
-    .sidebar ul { list-style: none; padding: 0; }
-    .sidebar ul li { margin-bottom: 15px; }
-    .sidebar ul li a { color: #ecf0f1; text-decoration: none; display: block; }
-    .sidebar ul li a:hover { color: #3498db; }
-    .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #ecf0f1; }
-    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .form-group { margin-bottom: 15px; }
-    input[type="text"], input[type="password"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #2980b9; }
-    .data-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    :root {
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg-color: #f1f5f9;
+      --card-bg: #ffffff;
+      --sidebar-bg: #1e293b;
+      --sidebar-hover: #334155;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.5;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ================= 佈局：左側欄位 ================= */
+    .sidebar {
+      width: 260px;
+      background-color: var(--sidebar-bg);
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 24px 20px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-menu {
+      flex: 1;
+      padding: 20px 0;
+      overflow-y: auto;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 24px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+    }
+    .menu-item:hover, .menu-item.active {
+      background-color: var(--sidebar-hover);
+      color: #fff;
+    }
+    .menu-item.active { border-left-color: #3b82f6; }
+    .menu-item.admin-only { color: #fca5a5; }
+    .menu-item.admin-only.active { border-left-color: #ef4444; }
+
+    /* ================= 佈局：右側主內容區 ================= */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    /* 頂部標題與管理員列 */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+
+    .admin-bar { display: flex; align-items: center; gap: 10px; }
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .status-locked { background-color: #fee2e2; color: #dc2626; }
+    .status-unlocked { background-color: #dcfce7; color: #16a34a; }
+
+    button {
+      padding: 6px 14px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-outline { background: transparent; border-color: var(--border-color); color: var(--text-main); }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 3px 8px; font-size: 0.75rem; }
+
+    input[type="text"], input[type="password"], select {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--primary-color); }
+
+    /* 區塊排版 */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .section-title { font-size: 1.15rem; font-weight: 600; }
+
+    /* 教師名單管理排版 */
+    .teachers-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .teacher-column {
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .teacher-column-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .teacher-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .teacher-chip {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+
+    /* 歷年學期執掌清單 */
+    .semester-list { display: flex; flex-direction: column; gap: 14px; }
+    .semester-row {
+      display: grid;
+      grid-template-columns: 160px repeat(3, 1fr) 50px;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .semester-name { font-weight: 700; font-size: 1.05rem; }
+    .duty-cell { display: flex; flex-direction: column; gap: 6px; }
+    .duty-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+    .sub-select-wrap { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
+
+    .disabled-action { opacity: 0.6; pointer-events: none; }
+
+    /* 分頁顯示控制 */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .placeholder-content {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* ================= 新增：統計規則與個人卡片區塊設計 ================= */
+    .rules-box {
+      background-color: #f8fafc;
+      border-left: 4px solid var(--primary-color);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .rules-box ul { margin-top: 8px; padding-left: 24px; }
+    .rules-box li { margin-bottom: 4px; }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+      border-color: #bfdbfe;
+    }
+    .stat-card-header {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px dashed #e2e8f0;
+      padding-bottom: 10px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+    .stat-total {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      color: var(--primary-color);
+      font-size: 1.05rem;
+      background: #eff6ff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: auto; /* 將總計推到底部 */
+    }
   </style>
 </head>
 <body>
 
-  <!-- 左側欄：根據身分切換顯示內容 -->
-  <div class="sidebar">
-    <h3>導覽選單</h3>
+<!-- 左側欄位 -->
+<aside class="sidebar">
+  <div class="sidebar-header">📐 數學領域系統</div>
+  <nav class="sidebar-menu">
+    <a class="menu-item active" onclick="switchTab('tab-duties', this)">歷年工作執掌與統計</a>
+    <a class="menu-item" onclick="switchTab('tab-meetings', this)">歷年會議記錄</a>
+    <a class="menu-item" onclick="switchTab('tab-plans', this)">歷年評鑑計劃</a>
+    <a class="menu-item" onclick="switchTab('tab-results', this)">歷年評鑑結果</a>
+    <a class="menu-item" onclick="switchTab('tab-materials', this)">數學領域相關資料</a>
     
-    <!-- 一般使用者選單 -->
-    <ul id="userMenu">
-      <li><a href="#">歷年工作職位</a></li>
-      <li><a href="#" target="_blank">歷年領域會議（雲端連結）</a></li>
-      <li><a href="#" target="_blank">歷年評鑑計劃（雲端連結）</a></li>
-      <li><a href="#" target="_blank">歷年評鑑結果（雲端連結）</a></li>
-    </ul>
+    <a class="menu-item admin-only" id="menuAiRecords" onclick="switchTab('tab-ai', this)" style="display: none;">
+      🔒 人工智慧會議記錄
+    </a>
+  </nav>
+</aside>
 
-    <!-- 管理員專屬選單 (預設隱藏) -->
-    <ul id="adminMenu" style="display: none;">
-      <li><a href="#">歷年工作職位 (編輯模式)</a></li>
-      <li><a href="#">歷年領域會議 (編輯模式)</a></li>
-      <li><a href="#">歷年評鑑計劃 (編輯模式)</a></li>
-      <li><a href="#">歷年評鑑結果 (編輯模式)</a></li>
-      <li><a href="#" style="color: #f1c40f; font-weight: bold;">AI會議助理</a></li>
-    </ul>
-  </div>
-
-  <div class="main-content">
-    <h2>數學領域工作資料</h2>
+<!-- 右側主內容區 -->
+<main class="main-wrapper">
+  <div class="container">
     
-    <!-- 資料提交區 (單筆 Delta 傳送) -->
-    <div class="card" id="submissionArea">
-      <h3>新增工作紀錄</h3>
-      <div class="form-group">
-        <label>項目名稱 / 標題:</label>
-        <input type="text" id="recordTitle" placeholder="輸入資料標題">
-      </div>
-      <div class="form-group">
-        <label>內容說明:</label>
-        <input type="text" id="recordContent" placeholder="輸入內容">
-      </div>
-      <button onclick="submitData()">送出單筆資料</button>
-      <span id="submitStatus" style="margin-left: 10px;"></span>
-    </div>
-
-    <!-- 管理員登入與編輯區 -->
-    <div class="card">
-      <h3 id="adminSectionTitle">管理員登入</h3>
-      <div id="loginArea">
-        <div class="form-group">
-          <label>請輸入管理員密碼:</label>
-          <input type="password" id="adminPassword" placeholder="輸入密碼">
+    <!-- 頁面標頭 -->
+    <header>
+      <h1 id="pageTitle">歷年工作執掌分配與次數統計</h1>
+      <div class="admin-bar">
+        <span id="adminBadge" class="status-badge status-locked">🔒 唯讀檢視模式</span>
+        <div id="loginArea">
+          <input type="password" id="adminPwdInput" placeholder="輸入管理密碼">
+          <button class="btn-primary btn-sm" onclick="handleLogin()">解鎖編輯</button>
         </div>
-        <button onclick="loginAdmin()">登入管理後台</button>
-        <span id="loginStatus" style="margin-left: 10px;"></span>
+        <button id="logoutBtn" class="btn-outline btn-sm" style="display:none;" onclick="handleLogout()">鎖定離開</button>
       </div>
+    </header>
 
-      <div id="adminDataArea" style="display: none; margin-top: 20px;">
-        <button onclick="loadAdminData()" style="background: #27ae60;">🔄 重新載入雲端資料</button>
-        <div id="dataList" style="margin-top: 15px;"></div>
-      </div>
+    <div id="tab-duties" class="tab-content active">
+      <!-- 區塊 1：領域教師名單管理 -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-title">👩‍🏫 領域教師名單</span>
+          <div class="admin-controls disabled-action" id="teacherAdminControl">
+            <input type="text" id="newTeacherName" placeholder="輸入教師姓名">
+            <button class="btn-primary btn-sm" onclick="addTeacher()">新增教師</button>
+          </div>
+        </div>
+        <div class="teachers-layout">
+          <div class="teacher-column">
+            <div class="teacher-column-title">
+              <span>現任領域教師</span>
+              <span id="currentCount" style="color: #16a34a;">0 位</span>
+            </div>
+            <div class="teacher-tags" id="currentTeachersList"></div>
+          </div>
+          <div class="teacher-column">
+            <div class="teacher-column-title">
+              <span>非現任領域教師 (曾任/調任)</span>
+              <span id="formerCount" style="color: var(--text-muted);">0 位</span>
+            </div>
+            <div class="teacher-tags" id="formerTeachersList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 2：歷年工作執掌分配 -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-title">📅 歷年工作職責分配</span>
+          <div class="admin-controls disabled-action" id="semesterAdminControl">
+            <input type="text" id="newSemesterName" placeholder="例如：115學年上">
+            <button class="btn-primary btn-sm" onclick="addSemester()">新增學期</button>
+          </div>
+        </div>
+        <div class="semester-list" id="semesterContainer">
+          <!-- 學期列由 JS 動態生成 -->
+        </div>
+      </section>
+
+      <!-- 區塊 3：歷年工作執掌次數統計 (升級為卡片與規則區塊) -->
+      <section class="section-card">
+        <div class="section-header" style="flex-direction: column; align-items: flex-start; border-bottom: none; padding-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+            <span class="section-title">📊 現任領域教師歷年工作次數統計</span>
+          </div>
+          
+          <!-- 統計規則說明區塊 -->
+          <div class="rules-box">
+            <strong>💡 統計核心精神：只顯示「現任教師」，且「誰實際做事，就算誰的」。</strong>
+            <ul>
+              <li><strong>代理優先：</strong>若原負責人與代理人皆為「現任領域教師」，工作次數歸實際執行的「代理人」。</li>
+              <li><strong>原主承擔：</strong>若代理人已離開領域（非現任），次數算回「原負責人」頭上。</li>
+              <li><strong>暫時隱藏：</strong>若兩人都已離開領域，這筆次數暫不顯示（紀錄會保留，未來有人回任即會重新出現）。</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 個人專屬卡片區塊 -->
+        <div class="stats-grid" id="statsContainer">
+          <!-- 卡片由 JS 即時計算生成 -->
+        </div>
+      </section>
     </div>
+
+    <!-- 其他預留分頁 -->
+    <div id="tab-meetings" class="tab-content"><div class="placeholder-content"><h2>歷年會議記錄</h2><p>建置中...</p></div></div>
+    <div id="tab-plans" class="tab-content"><div class="placeholder-content"><h2>歷年評鑑計劃</h2><p>建置中...</p></div></div>
+    <div id="tab-results" class="tab-content"><div class="placeholder-content"><h2>歷年評鑑結果</h2><p>建置中...</p></div></div>
+    <div id="tab-materials" class="tab-content"><div class="placeholder-content"><h2>數學領域相關資料</h2><p>建置中...</p></div></div>
+    <div id="tab-ai" class="tab-content"><div class="placeholder-content" style="border: 2px dashed #ef4444;"><h2 style="color: #ef4444;">🔒 人工智慧會議記錄 (管理者專區)</h2><p>機密資料建置中...</p></div></div>
+
   </div>
+</main>
 
-  <script>
-    // 1. 前端只傳送「單筆新資料 (Delta)」[span_40](start_span)[span_40](end_span)
-    function submitData() {
-      const title = document.getElementById('recordTitle').value;
-      const content = document.getElementById('recordContent').value;
-      const statusLabel = document.getElementById('submitStatus');
+<script>
+  // 分頁切換功能
+  function switchTab(tabId, element) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+    document.getElementById('pageTitle').textContent = element.textContent.replace('🔒', '').trim();
+  }
 
-      if (!title || !content) {
-        statusLabel.innerText = "請填寫完整資訊！";
-        statusLabel.style.color = "red";
-        return;
+  // 核心資料
+  const SEMESTER_PALETTE = ['#eff6ff', '#fdf2f8', '#f0fdf4', '#fefce8', '#faf5ff', '#fff7ed', '#f0fdfa', '#f5f3ff'];
+
+  let state = {
+    isAdmin: false,
+    teachers: [
+      { id: "t1", name: "王老師", isCurrent: true },
+      { id: "t2", name: "李老師", isCurrent: true },
+      { id: "t3", name: "張老師", isCurrent: true },
+      { id: "t4", name: "陳老師", isCurrent: false }
+    ],
+    semesters: [
+      { id: "s114-2", name: "114學年下", color: "#eff6ff" },
+      { id: "s114-1", name: "114學年上", color: "#fdf2f8" },
+      { id: "s113-2", name: "113學年下", color: "#f0fdf4" },
+      { id: "s113-1", name: "113學年上", color: "#fefce8" }
+    ],
+    duties: {
+      's114-2_召集人': { primary: 't1', substitute: '' },
+      's114-2_參加研習': { primary: 't2', substitute: '' },
+      's114-2_會議記錄': { primary: 't3', substitute: '' },
+      's114-1_召集人': { primary: 't2', substitute: 't1' }, 
+      's114-1_參加研習': { primary: 't3', substitute: '' },
+      's114-1_會議記錄': { primary: 't4', substitute: 't1' }
+    }
+  };
+
+  const ROLES = ["召集人", "參加研習", "會議記錄"];
+
+  window.onload = () => renderAll();
+
+  function renderAll() {
+    renderTeacherManagement();
+    renderSemesters();
+    calculateAndRenderStats();
+    updateAdminUI();
+  }
+
+  function handleLogin() {
+    const pwd = document.getElementById('adminPwdInput').value;
+    if (pwd === "admin_password_123" || pwd === "1234") {
+      state.isAdmin = true;
+      document.getElementById('adminPwdInput').value = '';
+      renderAll();
+    } else alert("密碼錯誤！");
+  }
+
+  function handleLogout() {
+    state.isAdmin = false;
+    const aiTab = document.getElementById('tab-ai');
+    if(aiTab.classList.contains('active')) switchTab('tab-duties', document.querySelector('.menu-item')); 
+    renderAll();
+  }
+
+  function updateAdminUI() {
+    const badge = document.getElementById('adminBadge');
+    const loginArea = document.getElementById('loginArea');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const teacherControl = document.getElementById('teacherAdminControl');
+    const semesterControl = document.getElementById('semesterAdminControl');
+    const menuAiRecords = document.getElementById('menuAiRecords');
+
+    if (state.isAdmin) {
+      badge.textContent = "🔓 管理者編輯模式";
+      badge.className = "status-badge status-unlocked";
+      loginArea.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      teacherControl.classList.remove('disabled-action');
+      semesterControl.classList.remove('disabled-action');
+      menuAiRecords.style.display = "flex";
+    } else {
+      badge.textContent = "🔒 唯讀檢視模式";
+      badge.className = "status-badge status-locked";
+      loginArea.style.display = "flex";
+      logoutBtn.style.display = "none";
+      teacherControl.classList.add('disabled-action');
+      semesterControl.classList.add('disabled-action');
+      menuAiRecords.style.display = "none";
+    }
+  }
+
+  function renderTeacherManagement() {
+    const currentList = document.getElementById('currentTeachersList');
+    const formerList = document.getElementById('formerTeachersList');
+    currentList.innerHTML = ''; formerList.innerHTML = '';
+    let currentCount = 0, formerCount = 0;
+
+    state.teachers.forEach(teacher => {
+      const chip = document.createElement('div');
+      chip.className = 'teacher-chip';
+      if (teacher.isCurrent) {
+        currentCount++;
+        chip.innerHTML = `<span>${teacher.name}</span> ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')">轉非現任 ⇄</button>` : ''}`;
+        currentList.appendChild(chip);
+      } else {
+        formerCount++;
+        chip.innerHTML = `<span>${teacher.name}</span> ${state.isAdmin ? `<button class="btn-outline btn-sm" onclick="toggleTeacherRole('${teacher.id}')">轉現任 ⇄</button>` : ''}`;
+        formerList.appendChild(chip);
       }
+    });
+    document.getElementById('currentCount').textContent = `${currentCount} 位`;
+    document.getElementById('formerCount').textContent = `${formerCount} 位`;
+  }
 
-      statusLabel.innerText = "資料傳送中...請稍後";
-      statusLabel.style.color = "#333";
+  function addTeacher() {
+    const name = document.getElementById('newTeacherName').value.trim();
+    if (!name) return alert("請輸入教師姓名");
+    state.teachers.push({ id: 't_' + Date.now(), name: name, isCurrent: true });
+    document.getElementById('newTeacherName').value = '';
+    renderAll();
+  }
 
-      // 僅將此單筆記錄打包[span_41](start_span)[span_41](end_span)
-      const deltaRecord = { title: title, content: content };
+  function toggleTeacherRole(id) {
+    const teacher = state.teachers.find(t => t.id === id);
+    if (teacher) { teacher.isCurrent = !teacher.isCurrent; renderAll(); }
+  }
 
-      google.script.run
-        .withSuccessHandler(res => {
-          if (res.success) {
-            statusLabel.innerText = res.message;[span_42](start_span)[span_42](end_span)
-            statusLabel.style.color = "green";
-            document.getElementById('recordTitle').value = '';[span_43](start_span)[span_43](end_span)
-            document.getElementById('recordContent').value = '';[span_44](start_span)[span_44](end_span)
-          } else {
-            statusLabel.innerText = "錯誤: " + res.error;[span_45](start_span)[span_45](end_span)
-            statusLabel.style.color = "red";
-          }
-        })
-        .submitRecord(deltaRecord);
-    }
-
-    // ==========================================
-    // 管理員登入與編輯功能
-    // ==========================================
-    let currentPassword = "";
-
-    function loginAdmin() {
-      const pwd = document.getElementById('adminPassword').value;
-      const statusLabel = document.getElementById('loginStatus');
-      statusLabel.innerText = "驗證中...";
-      
-      google.script.run
-        .withSuccessHandler(data => {
-          currentPassword = pwd;
-          // 切換介面與左側欄
-          document.getElementById('loginArea').style.display = "none";
-          document.getElementById('adminSectionTitle').innerText = "資料編輯後台";
-          document.getElementById('adminDataArea').style.display = "block";
-          
-          document.getElementById('userMenu').style.display = "none";
-          document.getElementById('adminMenu').style.display = "block";
-          
-          renderDataList(data);[span_46](start_span)[span_46](end_span)
-        })
-        .withFailureHandler(err => {
-          statusLabel.innerText = "登入失敗：" + err.message;[span_47](start_span)[span_47](end_span)
-          statusLabel.style.color = "red";
-        })
-        .getAdminData(pwd);[span_48](start_span)[span_48](end_span)
-    }
-
-    function loadAdminData() {
-      google.script.run
-        .withSuccessHandler(renderDataList)[span_49](start_span)[span_49](end_span)
-        .getAdminData(currentPassword);[span_50](start_span)[span_50](end_span)
-    }
-
-    function renderDataList(data) {
-      const container = document.getElementById('dataList');
-      container.innerHTML = "";
-      
-      if (data.length === 0) {
-        container.innerHTML = "<p>雲端硬碟中目前沒有資料。</p>";
-        return;
-      }
-
-      // 渲染所有雲端資料，並提供編輯輸入框[span_51](start_span)[span_51](end_span)
-      data.forEach(item => {
-        const div = document.createElement('div');
-        div.className = "data-item";
-        div.innerHTML = `
-          <strong>標題:</strong> <input type="text" id="title_${item.id}" value="${item.title}"><br><br>
-          <strong>內容:</strong> <input type="text" id="content_${item.id}" value="${item.content}"><br>
-          <small style="color:#7f8c8d; display:block; margin-top:5px;">時間: ${item.timestamp}</small>
-          <button onclick="saveEdit('${item.id}')" style="margin-top:10px; padding: 5px 10px; font-size: 12px;">儲存修改</button>
-          <span id="msg_${item.id}" style="margin-left: 10px; font-size: 14px;"></span>
-        `;
-        container.appendChild(div);
+  function renderSemesters() {
+    const container = document.getElementById('semesterContainer');
+    container.innerHTML = '';
+    state.semesters.forEach(sem => {
+      const row = document.createElement('div');
+      row.className = 'semester-row';
+      row.style.backgroundColor = sem.color;
+      let dutyColsHTML = '';
+      ROLES.forEach(role => {
+        const key = `${sem.id}_${role}`;
+        const currentDuty = state.duties[key] || { primary: '', substitute: '' };
+        dutyColsHTML += `
+          <div class="duty-cell">
+            <span class="duty-label">${role}</span>
+            <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutyPrimary('${key}', this.value)">
+              <option value="">-- 請選擇 --</option>
+              ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.primary ? 'selected' : ''}>${t.name} ${!t.isCurrent ? '(非)' : ''}</option>`).join('')}
+            </select>
+            <div class="sub-select-wrap">
+              <span>由</span>
+              <select ${!state.isAdmin ? 'disabled' : ''} onchange="updateDutySubstitute('${key}', this.value)">
+                <option value="">無</option>
+                ${state.teachers.map(t => `<option value="${t.id}" ${t.id === currentDuty.substitute ? 'selected' : ''}>${t.name}</option>`).join('')}
+              </select>
+              <span>代理</span>
+            </div>
+          </div>`;
       });
-    }
+      const delBtnHTML = state.isAdmin ? `<button class="btn-danger btn-sm" onclick="removeSemester('${sem.id}')">✕</button>` : `<div></div>`;
+      row.innerHTML = `<div class="semester-name">${sem.name}</div>${dutyColsHTML}${delBtnHTML}`;
+      container.appendChild(row);
+    });
+  }
 
-    function saveEdit(id) {
-      const msgSpan = document.getElementById(`msg_${id}`);
-      msgSpan.innerText = "儲存中...";
-      
-      const updatedRecord = {
-        id: id,[span_52](start_span)[span_52](end_span)
-        title: document.getElementById(`title_${id}`).value,
-        content: document.getElementById(`content_${id}`).value,
-        timestamp: new Date().toISOString()[span_53](start_span)[span_53](end_span)
-      };
+  function addSemester() {
+    const input = document.getElementById('newSemesterName');
+    const name = input.value.trim();
+    if (!name) return alert("請輸入學期名稱");
+    state.semesters.unshift({ id: 's_' + Date.now(), name: name, color: SEMESTER_PALETTE[state.semesters.length % SEMESTER_PALETTE.length] });
+    input.value = '';
+    renderAll();
+  }
 
-      google.script.run
-        .withSuccessHandler(res => {
-          if(res.success) {
-            msgSpan.innerText = "已更新至 Google Drive!";
-            msgSpan.style.color = "green";
-          }
-        })
-        .withFailureHandler(err => {
-          msgSpan.innerText = "失敗: " + err.message;[span_54](start_span)[span_54](end_span)
-        })
-        .updateRecord(currentPassword, updatedRecord);[span_55](start_span)[span_55](end_span)
+  function removeSemester(semId) {
+    if (!confirm("確定要移除此學期紀錄嗎？")) return;
+    state.semesters = state.semesters.filter(s => s.id !== semId);
+    renderAll();
+  }
+
+  function updateDutyPrimary(key, val) {
+    if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
+    state.duties[key].primary = val; calculateAndRenderStats();
+  }
+
+  function updateDutySubstitute(key, val) {
+    if (!state.duties[key]) state.duties[key] = { primary: '', substitute: '' };
+    state.duties[key].substitute = val; calculateAndRenderStats();
+  }
+
+  // ==========================================
+  // 更新為「個人區塊(卡片)」的統計渲染邏輯
+  // ==========================================
+  function calculateAndRenderStats() {
+    const teacherMap = {};
+    state.teachers.forEach(t => { teacherMap[t.id] = t; });
+    const stats = {};
+    
+    // 初始化現任教師
+    state.teachers.filter(t => t.isCurrent).forEach(t => {
+      stats[t.id] = { name: t.name, "召集人": 0, "參加研習": 0, "會議記錄": 0, total: 0 };
+    });
+
+    // 統計計算
+    state.semesters.forEach(sem => {
+      ROLES.forEach(role => {
+        const key = `${sem.id}_${role}`;
+        const duty = state.duties[key];
+        if (!duty || !duty.primary) return;
+
+        const primaryTeacher = teacherMap[duty.primary];
+        const subTeacher = duty.substitute ? teacherMap[duty.substitute] : null;
+        let creditToTeacherId = null;
+
+        if (!subTeacher) {
+          if (primaryTeacher && primaryTeacher.isCurrent) creditToTeacherId = primaryTeacher.id;
+        } else {
+          if (subTeacher.isCurrent) creditToTeacherId = subTeacher.id; 
+          else if (primaryTeacher && primaryTeacher.isCurrent) creditToTeacherId = primaryTeacher.id;
+        }
+
+        if (creditToTeacherId && stats[creditToTeacherId]) {
+          stats[creditToTeacherId][role]++;
+          stats[creditToTeacherId].total++;
+        }
+      });
+    });
+
+    const container = document.getElementById('statsContainer');
+    container.innerHTML = '';
+    const currentList = state.teachers.filter(t => t.isCurrent);
+    
+    if (currentList.length === 0) {
+      container.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding: 30px; color:var(--text-muted);">目前無現任教師資料</div>`;
+      return;
     }
-  </script>
+    
+    // 渲染每一張教師卡片
+    currentList.forEach(t => {
+      const data = stats[t.id];
+      container.innerHTML += `
+        <div class="stat-card">
+          <div class="stat-card-header">🧑‍🏫 ${data.name}</div>
+          <div class="stat-item"><span>召集人</span><span>${data["召集人"]} 次</span></div>
+          <div class="stat-item"><span>參加研習</span><span>${data["參加研習"]} 次</span></div>
+          <div class="stat-item"><span>會議記錄</span><span>${data["會議記錄"]} 次</span></div>
+          <div class="stat-total"><span>總計</span><span>${data.total} 次</span></div>
+        </div>
+      `;
+    });
+  }
+</script>
+
 </body>
 </html>
